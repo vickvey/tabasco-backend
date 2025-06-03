@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from transformers import BertTokenizer, BertModel
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 
 class DisambModel:
@@ -33,8 +33,8 @@ class DisambModel:
         self.tokenizer = tokenizer
         self.device = device
 
+    @staticmethod
     def _find_subword_span(
-        self,
         tokens: List[str],
         target_tokens: List[str]
     ) -> Tuple[int, int]:
@@ -69,14 +69,49 @@ class DisambModel:
         tokens = self.tokenizer.tokenize(marked_text)
         target_tokens = self.tokenizer.tokenize(target_word.lower())
 
-        # 2) Locate where the target subwords appear
-        tgt_start, tgt_end = self._find_subword_span(tokens, target_tokens)
+        # Check if tokens exceed max length (512) and truncate if necessary
+        max_length = 512
+        if len(tokens) > max_length:
+            # Find target word position
+            try:
+                tgt_start, tgt_end = self._find_subword_span(tokens, target_tokens)
+
+                # Ensure target word is in the truncated sequence
+                # Keep some context around the target word
+                context_size = (max_length - (tgt_end - tgt_start + 1)) // 2
+                start_idx = max(1, tgt_start - context_size)  # Keep [CLS] token
+                end_idx = min(len(tokens) - 1, tgt_start + (max_length - (tgt_start - start_idx)))  # Keep room for [SEP]
+
+                # Ensure we don't exceed max_length
+                if end_idx - start_idx + 1 > max_length:
+                    end_idx = start_idx + max_length - 1
+
+                # Truncate tokens
+                tokens = tokens[start_idx:end_idx+1]
+
+                # Recalculate target position in truncated sequence
+                tgt_start, tgt_end = self._find_subword_span(tokens, target_tokens)
+            except ValueError:
+                # If target word not found, just truncate to max_length
+                tokens = tokens[:max_length]
+                # Try to find target in truncated sequence
+                tgt_start, tgt_end = self._find_subword_span(tokens, target_tokens)
+        else:
+            # 2) Locate where the target subwords appear
+            tgt_start, tgt_end = self._find_subword_span(tokens, target_tokens)
 
         # 3) Convert to IDs, build token_type_ids at once
+        # If tokens were truncated, we need to use the truncated tokens instead of the original marked_text
+        if len(tokens) < len(self.tokenizer.tokenize(marked_text)):
+            # Convert tokens back to text
+            marked_text = self.tokenizer.convert_tokens_to_string(tokens)
+
         encodings = self.tokenizer.encode_plus(
             marked_text,
             add_special_tokens=False,   # already manually added
             return_tensors="pt",
+            truncation=True,
+            max_length=512,
         )
         input_ids = encodings["input_ids"].to(self.device)            # shape: [1, seq_len]
         token_type_ids = (
@@ -130,17 +165,55 @@ class DisambModel:
         tokens = self.tokenizer.tokenize(marked_text)
         target_tokens = self.tokenizer.tokenize(target_word.lower())
 
-        # 2) Find all subword spans that match the target (we’ll use only the first occurrence for similarity)
-        try:
-            first_start, first_end = self._find_subword_span(tokens, target_tokens)
-        except ValueError:
-            return []
+        # Check if tokens exceed max length (512) and truncate if necessary
+        max_length = 512
+        if len(tokens) > max_length:
+            # Find target word position
+            try:
+                first_start, first_end = self._find_subword_span(tokens, target_tokens)
+
+                # Ensure target word is in the truncated sequence
+                # Keep some context around the target word
+                context_size = (max_length - (first_end - first_start + 1)) // 2
+                start_idx = max(1, first_start - context_size)  # Keep [CLS] token
+                end_idx = min(len(tokens) - 1, first_start + (max_length - (first_start - start_idx)))  # Keep room for [SEP]
+
+                # Ensure we don't exceed max_length
+                if end_idx - start_idx + 1 > max_length:
+                    end_idx = start_idx + max_length - 1
+
+                # Truncate tokens
+                tokens = tokens[start_idx:end_idx+1]
+
+                # Recalculate target position in truncated sequence
+                first_start, first_end = self._find_subword_span(tokens, target_tokens)
+            except ValueError:
+                # If target word not found, just truncate to max_length
+                tokens = tokens[:max_length]
+                # Try to find target in truncated sequence
+                try:
+                    first_start, first_end = self._find_subword_span(tokens, target_tokens)
+                except ValueError:
+                    return []
+        else:
+            # 2) Find all subword spans that match the target (we'll use only the first occurrence for similarity)
+            try:
+                first_start, first_end = self._find_subword_span(tokens, target_tokens)
+            except ValueError:
+                return []
 
         # 3) Convert to IDs / token_type_ids
+        # If tokens were truncated, we need to use the truncated tokens instead of the original marked_text
+        if len(tokens) < len(self.tokenizer.tokenize(marked_text)):
+            # Convert tokens back to text
+            marked_text = self.tokenizer.convert_tokens_to_string(tokens)
+
         encodings = self.tokenizer.encode_plus(
             marked_text,
             add_special_tokens=False,
             return_tensors="pt",
+            truncation=True,
+            max_length=512,
         )
         input_ids = encodings["input_ids"].to(self.device)            # [1, seq_len]
         token_type_ids = torch.ones_like(input_ids).to(self.device)    # single‐sentence segment IDs

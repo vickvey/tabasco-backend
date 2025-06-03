@@ -5,7 +5,8 @@ from pathlib import Path
 import os
 from typing import Optional
 
-from pydantic import BaseSettings as _BaseSettings, Field
+from pydantic_settings import BaseSettings as _BaseSettings
+from pydantic import Field
 
 
 # ------------------------------------------------------------------------------
@@ -45,13 +46,13 @@ class Settings(_BaseSettings):
 
     Example usage:
         >>> settings = Settings()
-        >>> print(settings.RUN_ENV)
+        >>> print (settings.RUN_ENV)
     """
     # Which environment to load: "development", "staging", "production", etc.
     RUN_ENV: str = Field(default="development", env="RUN_ENV")
 
-    # Add other environment‐driven configuration here, for example:
-    #   - API_KEY: Optional[str] = Field(None, env="API_KEY")
+    # Add other environment‐driven configuration here, for example,
+    #   - API_KEY: Optional[str] = Field (None, env="API_KEY")
     #   - DEBUG_MODE: bool = Field(False, env="DEBUG_MODE")
     #
     # For now, we only load RUN_ENV.
@@ -75,7 +76,7 @@ class Settings(_BaseSettings):
         env_filename = f".env.{run_env}.local"
         env_path = PROJECT_ROOT / env_filename
 
-        # If that specific file doesn’t exist, fallback to ".env.local", or skip quietly
+        # If that specific file doesn’t exist, fallback to ".env.local" or skip quietly
         if not env_path.is_file():
             fallback = PROJECT_ROOT / ".env.local"
             env_path = fallback if fallback.is_file() else None

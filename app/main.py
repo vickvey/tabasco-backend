@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import cast
 
 from app.routes import router as api_router
+from app.utils.api_response import ApiResponse
 from app.utils.model_config import get_disamb_model
 from app.settings import Settings
 from app.types import AppState
@@ -25,5 +26,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+@app.get('/')
+def root_route():
+    return ApiResponse.success('Hey, TABASCO is working!')
 
 app.include_router(api_router, prefix="/api/v1")
