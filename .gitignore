@@ -4,10 +4,6 @@
 *.env
 *.env.*
 
-# Uploads PDF
-uploads
-static
-
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 

@@ -3,7 +3,7 @@ import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk import pos_tag, FreqDist
 from app.settings import UPLOAD_FOLDER
-from app.utils.helpers import pdf2text
+from utils.helpers import pdf2text
 
 # Ensure necessary NLTK packages are downloaded.
 nltk.download('punkt')
