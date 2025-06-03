@@ -1,7 +1,5 @@
 # services/file_generation.py
-from pathlib import Path
 from nltk.tokenize import word_tokenize
-from app.settings import SUMMARY_FOLDER, DETAILED_FOLDER
 
 def generate_summary_files(target_word, clusters_dict, summary_folder_path, disamb_model=None):
     """

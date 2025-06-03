@@ -3,6 +3,7 @@ import torch
 from sklearn.cluster import KMeans
 from kneed import KneeLocator
 
+
 def get_target_matrix(sentences, disamb_model, target_word):
     """
     For each sentence compute an embedding vector.
@@ -10,6 +11,9 @@ def get_target_matrix(sentences, disamb_model, target_word):
     """
     embeddings = []
     for sent in sentences:
+        tokens = disamb_model.tokenizer.tokenize(f"[CLS] {sent} [SEP]")
+        if len(tokens) > 512:
+            print(f"Warning: Sentence exceeds 512 tokens (length={len(tokens)}): {sent}")
         target_emb = disamb_model.forward(sent, target_word)
         embeddings.append(target_emb)
     n = len(embeddings)

@@ -1,7 +1,8 @@
+# models/disamb_model.py
 import torch
 import torch.nn.functional as F
 from transformers import BertTokenizer, BertModel
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 
 class DisambModel:
@@ -10,7 +11,7 @@ class DisambModel:
       1. Extract a single “target word” embedding from its contextual representation.
       2. Find the top‐k most similar tokens (context words) to that target embedding.
 
-    Expects that the underlying `model` is a HuggingFace transformer with
+    Expect that the underlying `model` is a HuggingFace transformer with
     `output_hidden_states=True`. The tokenizer should be the corresponding tokenizer.
     """
 
@@ -33,8 +34,8 @@ class DisambModel:
         self.tokenizer = tokenizer
         self.device = device
 
+    @staticmethod
     def _find_subword_span(
-        self,
         tokens: List[str],
         target_tokens: List[str]
     ) -> Tuple[int, int]:
@@ -49,65 +50,55 @@ class DisambModel:
 
         raise ValueError(f"Target tokens {target_tokens} not found in token list.")
 
-    def forward(
-        self,
-        input_sentence: str,
-        target_word: str,
-    ) -> torch.Tensor:
-        """
-        Compute a single embedding for `target_word` within `input_sentence` by:
-          - Tokenizing the sentence (with [CLS] and [SEP]).
-          - Finding the subword span for `target_word`.
-          - Averaging the last 4 layers’ hidden states for each subword and then averaging across subwords.
-
-        :param input_sentence: The full sentence (e.g. "I went to the bank to deposit money.").
-        :param target_word: The single word (e.g. "bank") that must appear in the sentence.
-        :return: A 1D tensor of shape [hidden_size], the “target embedding.”
-        """
-        # 1) Tokenize + add special tokens
+    # In disamb_model.py
+    def forward(self, input_sentence: str, target_word: str) -> torch.Tensor:
+        # 1) Tokenize and add special tokens
         marked_text = f"{self.tokenizer.cls_token} {input_sentence} {self.tokenizer.sep_token}"
         tokens = self.tokenizer.tokenize(marked_text)
         target_tokens = self.tokenizer.tokenize(target_word.lower())
 
+        # Log if sentence is too long
+        if len(tokens) > 512:
+            print(f"Warning: Input sentence exceeds 512 tokens (length={len(tokens)}): {input_sentence[:100]}...")
+
         # 2) Locate where the target subwords appear
-        tgt_start, tgt_end = self._find_subword_span(tokens, target_tokens)
+        try:
+            tgt_start, tgt_end = self._find_subword_span(tokens, target_tokens)
+        except ValueError:
+            raise ValueError(f"Target word '{target_word}' not found in sentence.")
 
         # 3) Convert to IDs, build token_type_ids at once
         encodings = self.tokenizer.encode_plus(
             marked_text,
-            add_special_tokens=False,   # already manually added
+            add_special_tokens=False,  # already manually added
+            max_length=512,  # Ensure truncation
+            truncation=True,
             return_tensors="pt",
         )
-        input_ids = encodings["input_ids"].to(self.device)            # shape: [1, seq_len]
-        token_type_ids = (
-            torch.ones_like(input_ids).to(self.device)  # all ones (single‐sentence)
-        )
+        input_ids = encodings["input_ids"].to(self.device)
+        token_type_ids = torch.ones_like(input_ids).to(self.device)
+
+        # Re-check if target word is still present after truncation
+        new_tokens = self.tokenizer.convert_ids_to_tokens(input_ids[0])
+        try:
+            self._find_subword_span(new_tokens, target_tokens)
+        except ValueError:
+            raise ValueError(f"Target word '{target_word}' was truncated from sentence.")
 
         # 4) Forward pass (no gradient needed)
         with torch.no_grad():
-            outputs = self.model(
-                input_ids,
-                token_type_ids=token_type_ids
-            )
-            hidden_states = outputs.hidden_states  # tuple of length num_layers
+            outputs = self.model(input_ids, token_type_ids=token_type_ids)
+            hidden_states = outputs.hidden_states
 
         # 5) For each subword token, sum the last 4 layers
-        # hidden_states[-1], hidden_states[-2], ...  etc.
         subword_embs = []
         for idx in range(tgt_start, tgt_end + 1):
-            # each layer is [batch_size=1, seq_len, hidden_size]
-            # take hidden_states[-1][0][idx], ..., hidden_states[-4][0][idx]
-            last_four = [
-                hidden_states[-layer_idx][0][idx]
-                for layer_idx in range(1, 5)
-            ]
-            # sum them → shape [hidden_size]
+            last_four = [hidden_states[-layer_idx][0][idx] for layer_idx in range(1, 5)]
             combined = torch.stack(last_four, dim=0).sum(dim=0)
             subword_embs.append(combined)
 
-        # 6) Average across all subword embeddings → [hidden_size]
+        # 6) Average across all subword embeddings
         target_emb = torch.stack(subword_embs, dim=0).mean(dim=0)
-
         return target_emb
 
     def get_context_words(
@@ -125,7 +116,7 @@ class DisambModel:
         :param top_k: Number of similar tokens to return.
         :return: A list of (token_str, cosine_similarity_score), sorted descending.
         """
-        # 1) Tokenize + add special tokens
+        # 1) Tokenize and add special tokens
         marked_text = f"{self.tokenizer.cls_token} {sentence} {self.tokenizer.sep_token}"
         tokens = self.tokenizer.tokenize(marked_text)
         target_tokens = self.tokenizer.tokenize(target_word.lower())
