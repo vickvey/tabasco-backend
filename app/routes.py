@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Form, HTTPException, Depends, UploadFile, File
 from fastapi.responses import JSONResponse, FileResponse
 from app.utils.helpers import pdf2text, allowed_file
-from app.services.text_processing import get_noun_list, process_sentences
+from app.services.sentence_processing import TextProcessingService
 from app.services.clustering import get_target_matrix, label_sentences_by_cluster, suggest_num_clusters
 from app.services.file_generation import generate_summary_files, generate_detailed_files
 from app.models.disamb_model import DisambModel
@@ -41,7 +41,7 @@ async def _process_file_and_sentences(filename: str, target_word: str = None, fr
         raise HTTPException(status_code=400, detail="frequency_limit must be positive")
     file_path = _ensure_uploaded_file_exists(filename)
     text = _read_file_text(file_path)
-    sentences = process_sentences(text, target_word, frequency_limit) if target_word else []
+    sentences = TextProcessingService.process_sentences(text, target_word, frequency_limit) if target_word else []
     return file_path, text, sentences
 
 # === File Upload Route ===
@@ -67,173 +67,175 @@ async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
         },
     )
 
+
 # === Utility Endpoints ===
-@router.post("/{prefix}/list")
-async def list_nouns(prefix: str, filename: str = Form(...), top_n: int = Form(50)) -> JSONResponse:
+@router.post("/top-n-nouns-with-frequency")
+async def get_n_top_nouns_freq(filename: str = Form(...), top_n: int = Form(50)) -> JSONResponse:
     """
     Return the top-N most frequent nouns in the uploaded file.
     """
-    if top_n <= 0:
-        raise HTTPException(status_code=400, detail="top_n must be positive")
-    if prefix not in ["main", "ambiguities"]:
-        raise HTTPException(status_code=400, detail="Invalid prefix; must be 'main' or 'ambiguities'")
+    if 0 >= top_n > 200:
+        raise HTTPException(status_code=400, detail="top_n must be in range [0, 200]")
+
     file_path = _ensure_uploaded_file_exists(filename)
-    nouns = get_noun_list(filename, top_n)
-    message = "Noun list retrieved" if prefix == "main" else "Ambiguity noun list"
-    return ApiResponse.success(message=message, data={"nouns": nouns})
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
 
-@router.post("/{prefix}/target-matrix")
-async def target_matrix(
-    prefix: str,
-    filename: str = Form(...),
-    target_word: str = Form(...),
-    frequency_limit: int = Form(100),
-    disamb_model: DisambModel = Depends(get_disamb_model),
-) -> JSONResponse:
-    """
-    Generate a target-word matrix for clustering and suggest the number of clusters.
-    """
-    if prefix not in ["main", "ambiguities"]:
-        raise HTTPException(status_code=400, detail="Invalid prefix; must be 'main' or 'ambiguities'")
-    if not target_word.strip():
-        raise HTTPException(status_code=400, detail="target_word cannot be empty")
-    _, text, sentences = await _process_file_and_sentences(filename, target_word, frequency_limit)
-    if not sentences:
-        raise HTTPException(status_code=404, detail=f"No sentences found containing the word '{target_word}'.")
+    nouns = TextProcessingService.extract_top_n_nouns_with_frequency(filename, top_n)
+    return ApiResponse.success(message="Noun list retrieved", data={"nouns": nouns})
 
-    matrix = get_target_matrix(sentences, disamb_model, target_word)
-    suggested_k = int(suggest_num_clusters(matrix))  # Convert to Python int
-    message = "Target-matrix generated" if prefix == "main" else "Ambiguity target-matrix generated"
+# @router.post("/{prefix}/target-matrix")
+# async def target_matrix(
+#     prefix: str,
+#     filename: str = Form(...),
+#     target_word: str = Form(...),
+#     frequency_limit: int = Form(100),
+#     disamb_model: DisambModel = Depends(get_disamb_model),
+# ) -> JSONResponse:
+#     """
+#     Generate a target-word matrix for clustering and suggest the number of clusters.
+#     """
+#     if prefix not in ["main", "ambiguities"]:
+#         raise HTTPException(status_code=400, detail="Invalid prefix; must be 'main' or 'ambiguities'")
+#     if not target_word.strip():
+#         raise HTTPException(status_code=400, detail="target_word cannot be empty")
+#     _, text, sentences = await _process_file_and_sentences(filename, target_word, frequency_limit)
+#     if not sentences:
+#         raise HTTPException(status_code=404, detail=f"No sentences found containing the word '{target_word}'.")
+#
+#     matrix = get_target_matrix(sentences, disamb_model, target_word)
+#     suggested_k = int(suggest_num_clusters(matrix))  # Convert to Python int
+#     message = "Target-matrix generated" if prefix == "main" else "Ambiguity target-matrix generated"
+#
+#     return ApiResponse.success(
+#         message=message,
+#         data={
+#             "matrix_shape": [int(dim) for dim in matrix.shape],  # Ensure Python int
+#             "num_sentences": len(sentences),
+#             "target_word": target_word,
+#             "suggested_k": suggested_k,
+#         },
+#     )
 
-    return ApiResponse.success(
-        message=message,
-        data={
-            "matrix_shape": [int(dim) for dim in matrix.shape],  # Ensure Python int
-            "num_sentences": len(sentences),
-            "target_word": target_word,
-            "suggested_k": suggested_k,
-        },
-    )
+# # === Ambiguity-focused Endpoints ===
+# @router.post("/ambiguities/cluster-sentences")
+# async def cluster_sentences(
+#     filename: str = Form(...),
+#     target_word: str = Form(...),
+#     frequency_limit: int = Form(100),
+#     num_clusters: int = Form(3),
+#     disamb_model: DisambModel = Depends(get_disamb_model),
+# ) -> JSONResponse:
+#     """
+#     Cluster sentences containing the target word into num_clusters.
+#     """
+#     if num_clusters <= 0:
+#         raise HTTPException(status_code=400, detail="num_clusters must be positive")
+#     if not target_word.strip():
+#         raise HTTPException(status_code=400, detail="target_word cannot be empty")
+#     _, text, sentences = await _process_file_and_sentences(filename, target_word, frequency_limit)
+#     if not sentences:
+#         raise HTTPException(status_code=404, detail=f"No sentences found containing the word '{target_word}'.")
+#
+#     matrix = get_target_matrix(sentences, disamb_model, target_word)
+#     clustered = label_sentences_by_cluster(sentences, matrix, num_clusters)
+#     result = {f"Cluster {idx + 1}": bucket for idx, bucket in clustered.items()}
+#
+#     return ApiResponse.success(message="Sentences clustered", data={"clusters": result})
 
-# === Ambiguity-focused Endpoints ===
-@router.post("/ambiguities/cluster-sentences")
-async def cluster_sentences(
-    filename: str = Form(...),
-    target_word: str = Form(...),
-    frequency_limit: int = Form(100),
-    num_clusters: int = Form(3),
-    disamb_model: DisambModel = Depends(get_disamb_model),
-) -> JSONResponse:
-    """
-    Cluster sentences containing the target word into num_clusters.
-    """
-    if num_clusters <= 0:
-        raise HTTPException(status_code=400, detail="num_clusters must be positive")
-    if not target_word.strip():
-        raise HTTPException(status_code=400, detail="target_word cannot be empty")
-    _, text, sentences = await _process_file_and_sentences(filename, target_word, frequency_limit)
-    if not sentences:
-        raise HTTPException(status_code=404, detail=f"No sentences found containing the word '{target_word}'.")
+# @router.post("/ambiguities/context-words")
+# async def ambiguities_context_words(
+#     filename: str = Form(...),
+#     target_word: str = Form(...),
+#     frequency_limit: int = Form(100),
+#     top_k: int = Form(10),
+#     disamb_model: DisambModel = Depends(get_disamb_model),
+# ) -> JSONResponse:
+#     """
+#     Return top-k most similar context words for the first sentence containing target_word.
+#     """
+#     if top_k <= 0:
+#         raise HTTPException(status_code=400, detail="top_k must be positive")
+#     if not target_word.strip():
+#         raise HTTPException(status_code=400, detail="target_word cannot be empty")
+#     _, text, sentences = await _process_file_and_sentences(filename, target_word, frequency_limit)
+#     if not sentences:
+#         raise HTTPException(status_code=404, detail=f"No sentences found containing the word '{target_word}'.")
+#
+#     first_sentence = sentences[0]
+#     context_words = disamb_model.get_context_words(first_sentence, target_word, top_k=top_k)
+#
+#     return ApiResponse.success(
+#         message="Context words retrieved",
+#         data={
+#             "sentence": first_sentence,
+#             "target_word": target_word,
+#             "context_words": context_words,
+#         },
+#     )
 
-    matrix = get_target_matrix(sentences, disamb_model, target_word)
-    clustered = label_sentences_by_cluster(sentences, matrix, num_clusters)
-    result = {f"Cluster {idx + 1}": bucket for idx, bucket in clustered.items()}
-
-    return ApiResponse.success(message="Sentences clustered", data={"clusters": result})
-
-@router.post("/ambiguities/context-words")
-async def ambiguities_context_words(
-    filename: str = Form(...),
-    target_word: str = Form(...),
-    frequency_limit: int = Form(100),
-    top_k: int = Form(10),
-    disamb_model: DisambModel = Depends(get_disamb_model),
-) -> JSONResponse:
-    """
-    Return top-k most similar context words for the first sentence containing target_word.
-    """
-    if top_k <= 0:
-        raise HTTPException(status_code=400, detail="top_k must be positive")
-    if not target_word.strip():
-        raise HTTPException(status_code=400, detail="target_word cannot be empty")
-    _, text, sentences = await _process_file_and_sentences(filename, target_word, frequency_limit)
-    if not sentences:
-        raise HTTPException(status_code=404, detail=f"No sentences found containing the word '{target_word}'.")
-
-    first_sentence = sentences[0]
-    context_words = disamb_model.get_context_words(first_sentence, target_word, top_k=top_k)
-
-    return ApiResponse.success(
-        message="Context words retrieved",
-        data={
-            "sentence": first_sentence,
-            "target_word": target_word,
-            "context_words": context_words,
-        },
-    )
-
-@router.post("/ambiguities/generate-summary")
-async def generate_summary(
-    filename: str = Form(...),
-    target_word: str = Form(...),
-    frequency_limit: int = Form(100),
-    num_clusters: int = Form(3),
-    disamb_model: DisambModel = Depends(get_disamb_model),
-) -> JSONResponse:
-    """
-    Cluster sentences by target_word and generate summary/detailed TXT files for each cluster.
-    """
-    if num_clusters <= 0:
-        raise HTTPException(status_code=400, detail="num_clusters must be positive")
-    if not target_word.strip():
-        raise HTTPException(status_code=400, detail="target_word cannot be empty")
-    _, text, sentences = await _process_file_and_sentences(filename, target_word, frequency_limit)
-    if not sentences:
-        raise HTTPException(status_code=404, detail=f"No sentences found containing the word '{target_word}'.")
-
-    matrix = get_target_matrix(sentences, disamb_model, target_word)
-    clusters = label_sentences_by_cluster(sentences, matrix, num_clusters)
-
-    generate_summary_files(target_word, clusters, SUMMARY_FOLDER, disamb_model)
-    generate_detailed_files(clusters, disamb_model, target_word, DETAILED_FOLDER)
-
-    summary_files = [f"summary_text_{i}.txt" for i in range(len(clusters))]
-    detailed_files = [f"text_{i}.txt" for i in range(len(clusters))]
-
-    return ApiResponse.success(
-        message=f"Generated files for {len(clusters)} clusters.",
-        data={"summary_files": summary_files, "detailed_files": detailed_files},
-    )
+# @router.post("/ambiguities/generate-summary")
+# async def generate_summary(
+#     filename: str = Form(...),
+#     target_word: str = Form(...),
+#     frequency_limit: int = Form(100),
+#     num_clusters: int = Form(3),
+#     disamb_model: DisambModel = Depends(get_disamb_model),
+# ) -> JSONResponse:
+#     """
+#     Cluster sentences by target_word and generate summary/detailed TXT files for each cluster.
+#     """
+#     if num_clusters <= 0:
+#         raise HTTPException(status_code=400, detail="num_clusters must be positive")
+#     if not target_word.strip():
+#         raise HTTPException(status_code=400, detail="target_word cannot be empty")
+#     _, text, sentences = await _process_file_and_sentences(filename, target_word, frequency_limit)
+#     if not sentences:
+#         raise HTTPException(status_code=404, detail=f"No sentences found containing the word '{target_word}'.")
+#
+#     matrix = get_target_matrix(sentences, disamb_model, target_word)
+#     clusters = label_sentences_by_cluster(sentences, matrix, num_clusters)
+#
+#     generate_summary_files(target_word, clusters, SUMMARY_FOLDER, disamb_model)
+#     generate_detailed_files(clusters, disamb_model, target_word, DETAILED_FOLDER)
+#
+#     summary_files = [f"summary_text_{i}.txt" for i in range(len(clusters))]
+#     detailed_files = [f"text_{i}.txt" for i in range(len(clusters))]
+#
+#     return ApiResponse.success(
+#         message=f"Generated files for {len(clusters)} clusters.",
+#         data={"summary_files": summary_files, "detailed_files": detailed_files},
+#     )
 
 # === Download Endpoints ===
-@router.get("/ambiguities/download-summary/{cluster_number}")
-async def download_summary(cluster_number: int) -> FileResponse:
-    """
-    Download the summary text file for a given cluster index.
-    """
-    if cluster_number < 0:
-        raise HTTPException(status_code=400, detail="cluster_number must be non-negative")
-    file_path = SUMMARY_FOLDER / f"summary_text_{cluster_number}.txt"
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Summary file not found.")
-    return FileResponse(
-        file_path,
-        media_type="text/plain",
-        filename=f"summary_cluster_{cluster_number}.txt",
-    )
+# @router.get("/ambiguities/download-summary/{cluster_number}")
+# async def download_summary(cluster_number: int) -> FileResponse:
+#     """
+#     Download the summary text file for a given cluster index.
+#     """
+#     if cluster_number < 0:
+#         raise HTTPException(status_code=400, detail="cluster_number must be non-negative")
+#     file_path = SUMMARY_FOLDER / f"summary_text_{cluster_number}.txt"
+#     if not file_path.exists():
+#         raise HTTPException(status_code=404, detail="Summary file not found.")
+#     return FileResponse(
+#         file_path,
+#         media_type="text/plain",
+#         filename=f"summary_cluster_{cluster_number}.txt",
+#     )
 
-@router.get("/ambiguities/download-detailed/{cluster_number}")
-async def download_detailed(cluster_number: int) -> FileResponse:
-    """
-    Download the detailed text file for a given cluster index.
-    """
-    if cluster_number < 0:
-        raise HTTPException(status_code=400, detail="cluster_number must be non-negative")
-    file_path = DETAILED_FOLDER / f"text_{cluster_number}.txt"
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Detailed file not found.")
-    return FileResponse(
-        file_path,
-        media_type="text/plain",
-        filename=f"detailed_cluster_{cluster_number}.txt",
-    )
+# @router.get("/ambiguities/download-detailed/{cluster_number}")
+# async def download_detailed(cluster_number: int) -> FileResponse:
+#     """
+#     Download the detailed text file for a given cluster index.
+#     """
+#     if cluster_number < 0:
+#         raise HTTPException(status_code=400, detail="cluster_number must be non-negative")
+#     file_path = DETAILED_FOLDER / f"text_{cluster_number}.txt"
+#     if not file_path.exists():
+#         raise HTTPException(status_code=404, detail="Detailed file not found.")
+#     return FileResponse(
+#         file_path,
+#         media_type="text/plain",
+#         filename=f"detailed_cluster_{cluster_number}.txt",
+#     )

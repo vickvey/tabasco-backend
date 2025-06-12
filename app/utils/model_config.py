@@ -3,6 +3,7 @@ from app.models.disamb_model import DisambModel
 import torch
 from fastapi import Request
 
+
 def get_disamb_model(request: Request = None):
     # If request is provided and app state has the model, use it
     if request and hasattr(request.app.state, "disamb_model"):

@@ -23,8 +23,8 @@ class ApiResponse:
     @staticmethod
     def success(
         message: str,
-        data: Optional[Any] = None,
         status_code: int = 200,
+        data: Optional[Any] = None,
     ) -> JSONResponse:
         """
         Standard success response.
