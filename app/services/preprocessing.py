@@ -1,38 +1,9 @@
 import re
-import fitz  # PyMuPDF
-from pathlib import Path
 from typing import Dict
 from nltk import word_tokenize, pos_tag, FreqDist
 from nltk.corpus import stopwords
 
 class TextPreprocessor:
-    @staticmethod
-    def pdf2text(file_path: Path) -> str:
-        """
-        Extract text from a PDF file using PyMuPDF (fitz).
-
-        Args:
-            file_path (Path): Path to the PDF file.
-
-        Returns:
-            str: Extracted text.
-
-        Raises:
-            FileNotFoundError: If file doesn't exist.
-            ValueError: If not a PDF or unreadable.
-        """
-        file_path = Path(file_path)
-        if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
-        if file_path.suffix.lower() != ".pdf":
-            raise ValueError(f"Invalid file type (expected PDF): {file_path}")
-
-        try:
-            with fitz.open(file_path) as doc:
-                text = " ".join(page.get_text("text") for page in doc if page.get_text("text"))
-            return text.strip()
-        except Exception as e:
-            raise ValueError(f"Failed to extract text from PDF: {e}")
 
     @staticmethod
     def basic_clean_text(text: str) -> str:

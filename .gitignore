@@ -4,6 +4,9 @@
 *.env
 *.env.*
 
+# Special example environment file (Not ignored)
+!.env.example
+
 # Uploads
 static
 uploads

@@ -1,9 +1,9 @@
-# app/routes.py
+# app/deprecated-l.py
 import shutil
 from pathlib import Path
 from fastapi import APIRouter, Form, HTTPException, Depends, UploadFile, File
 from fastapi.responses import JSONResponse, FileResponse
-from app.utils.helpers import pdf2text, allowed_file
+from app.utils.standardize import pdf2text, allowed_file
 from app.services.sentence_processing import TextProcessingService
 from app.services.clustering import get_target_matrix, label_sentences_by_cluster, suggest_num_clusters
 from app.services.file_generation import generate_summary_files, generate_detailed_files
@@ -45,27 +45,27 @@ async def _process_file_and_sentences(filename: str, target_word: str = None, fr
     return file_path, text, sentences
 
 # === File Upload Route ===
-@router.post("/files/upload")
-async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
-    """
-    Upload a PDF or TXT file to UPLOAD_FOLDER and return metadata.
-    """
-    if not file.filename or not allowed_file(file.filename):
-        raise HTTPException(status_code=400, detail="File type not allowed; only PDF or TXT are accepted.")
-
-    file_location = UPLOAD_FOLDER / file.filename
-    with open(file_location, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    text = _read_file_text(file_location)
-    return ApiResponse.success(
-        message="File uploaded successfully",
-        data={
-            "filename": file.filename,
-            "text_length": len(text),
-            "upload_path": str(file_location),
-        },
-    )
+# @router.post("/files/upload")
+# async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
+#     """
+#     Upload a PDF or TXT file to UPLOAD_FOLDER and return metadata.
+#     """
+#     if not file.filename or not allowed_file(file.filename):
+#         raise HTTPException(status_code=400, detail="File type not allowed; only PDF or TXT are accepted.")
+#
+#     file_location = UPLOAD_FOLDER / file.filename
+#     with open(file_location, "wb") as buffer:
+#         shutil.copyfileobj(file.file, buffer)
+#
+#     text = _read_file_text(file_location)
+#     return ApiResponse.success(
+#         message="File uploaded successfully",
+#         data={
+#             "filename": file.filename,
+#             "text_length": len(text),
+#             "upload_path": str(file_location),
+#         },
+#     )
 
 
 # === Utility Endpoints ===
