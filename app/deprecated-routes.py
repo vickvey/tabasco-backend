@@ -1,15 +1,10 @@
 # app/deprecated-l.py
-import shutil
 from pathlib import Path
-from fastapi import APIRouter, Form, HTTPException, Depends, UploadFile, File
-from fastapi.responses import JSONResponse, FileResponse
-from app.utils.standardize import pdf2text, allowed_file
+from fastapi import APIRouter, Form, HTTPException
+from fastapi.responses import JSONResponse
+from app.utils.standardize import pdf2text
 from app.services.sentence_processing import TextProcessingService
-from app.services.clustering import get_target_matrix, label_sentences_by_cluster, suggest_num_clusters
-from app.services.file_generation import generate_summary_files, generate_detailed_files
-from app.models.disamb_model import DisambModel
-from app.utils.model_config import get_disamb_model
-from app.settings import DETAILED_FOLDER, SUMMARY_FOLDER, UPLOAD_FOLDER
+from app.config.settings import UPLOAD_FOLDER
 from app.utils.api_response import ApiResponse
 
 router = APIRouter()
@@ -69,20 +64,20 @@ async def _process_file_and_sentences(filename: str, target_word: str = None, fr
 
 
 # === Utility Endpoints ===
-@router.post("/top-n-nouns-with-frequency")
-async def get_n_top_nouns_freq(filename: str = Form(...), top_n: int = Form(50)) -> JSONResponse:
-    """
-    Return the top-N most frequent nouns in the uploaded file.
-    """
-    if 0 >= top_n > 200:
-        raise HTTPException(status_code=400, detail="top_n must be in range [0, 200]")
-
-    file_path = _ensure_uploaded_file_exists(filename)
-    if not file_path.is_file():
-        raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
-
-    nouns = TextProcessingService.extract_top_n_nouns_with_frequency(filename, top_n)
-    return ApiResponse.success(message="Noun list retrieved", data={"nouns": nouns})
+# @router.post("/top-n-nouns-with-frequency")
+# async def get_n_top_nouns_freq(filename: str = Form(...), top_n: int = Form(50)) -> JSONResponse:
+#     """
+#     Return the top-N most frequent nouns in the uploaded file.
+#     """
+#     if 0 >= top_n > 200:
+#         raise HTTPException(status_code=400, detail="top_n must be in range [0, 200]")
+#
+#     file_path = _ensure_uploaded_file_exists(filename)
+#     if not file_path.is_file():
+#         raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
+#
+#     nouns = TextProcessingService.extract_top_n_nouns_with_frequency(filename, top_n)
+#     return ApiResponse.success(message="Noun list retrieved", data={"nouns": nouns})
 
 # @router.post("/{prefix}/target-matrix")
 # async def target_matrix(

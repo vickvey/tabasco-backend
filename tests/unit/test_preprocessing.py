@@ -1,11 +1,13 @@
 import unittest
 from pathlib import Path
-from app.services.preprocessing import TextPreprocessor
+from app.services import TextPreprocessor
 
 import tempfile
 import fitz  # PyMuPDF
 import os
 import nltk
+
+from app.utils.pdf_file_utils import pdf2text
 
 # Ensure required NLTK resources are downloaded
 nltk.download("punkt")
@@ -17,7 +19,7 @@ class TestTextPreprocessor(unittest.TestCase):
     def test_basic_clean_text(self):
         raw_text = "Hello, World! This is a test. 123"
         expected = "hello world this is a test 123"
-        cleaned = TextPreprocessor.basic_clean_text(raw_text)
+        cleaned = TextPreprocessor._basic_clean_text(raw_text)
         self.assertEqual(cleaned, expected)
 
     def test_extract_top_n_nouns_with_frequency(self):
@@ -45,12 +47,12 @@ class TestTextPreprocessor(unittest.TestCase):
             page.insert_text((72, 72), "This is a test PDF with some text.")
             doc.save(temp_pdf_path)
 
-            extracted_text = TextPreprocessor.pdf2text(temp_pdf_path)
+            extracted_text = pdf2text(temp_pdf_path)
             self.assertIn("test PDF", extracted_text)
 
     def test_pdf2text_invalid_path(self):
         with self.assertRaises(FileNotFoundError):
-            TextPreprocessor.pdf2text(Path("nonexistent_file.pdf"))
+            pdf2text(Path("nonexistent_file.pdf"))
 
     def test_pdf2text_invalid_file_type(self):
         with tempfile.NamedTemporaryFile(suffix=".txt", mode="w", delete=False) as tmp:
@@ -58,7 +60,7 @@ class TestTextPreprocessor(unittest.TestCase):
             tmp_path = Path(tmp.name)
 
         with self.assertRaises(ValueError):
-            TextPreprocessor.pdf2text(tmp_path)
+            pdf2text(tmp_path)
 
         os.remove(tmp_path)
 
@@ -69,7 +71,7 @@ class TestTextPreprocessorComplexCase(unittest.TestCase):
             and impact—were emphasized throughout the presentation. Employees from different departments like 
             marketing, engineering, and human resources joined the discussion. The presentation included data, 
             charts, and projections. The CEO mentioned "data" and "innovation" multiple times, while the team 
-            leads contributed with insights about performance and strategy.
+            leads contributed with insights about performance and strategy. BUG! BUG! BUG! BUG! BUG!
         """
 
         result = TextPreprocessor.extract_top_n_nouns_with_frequency(sample_text, top_n=5)
@@ -78,7 +80,7 @@ class TestTextPreprocessorComplexCase(unittest.TestCase):
         self.assertIsInstance(result, dict)
         self.assertGreaterEqual(len(result), 3)
 
-        expected_nouns = {"company", "innovation", "data", "presentation", "ceo"}
+        expected_nouns = {"bug", "company", "innovation", "data", "presentation", "ceo"}
         found_nouns = set(result.keys())
 
         # Check that expected frequent nouns are in the result

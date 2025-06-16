@@ -9,8 +9,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # ------------------------------------------------------------------------------
 # PROJECT FOLDERS
 # ------------------------------------------------------------------------------
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-UPLOAD_FOLDER = PROJECT_ROOT / "uploads"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+UPLOAD_FOLDER = PROJECT_ROOT / "static" / "uploads"
 SUMMARY_FOLDER = PROJECT_ROOT / "static" / "summary"
 DETAILED_FOLDER = PROJECT_ROOT / "static" / "detailed"
 LOG_DIR = PROJECT_ROOT / "logs"
@@ -60,7 +60,6 @@ class Settings(BaseSettings):
 
     # App environment
     ENVIRONMENT: EnvironmentType = environment
-    DEBUG: bool = Field(default=False)
 
     # Logging
     LOG_LEVEL: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")

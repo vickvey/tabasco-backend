@@ -2,9 +2,9 @@ import nltk
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from app.utils import ApiResponse
-from app.v1_routes import router as api_v1_router
-from app.settings import settings
+from .utils import ApiResponse
+from .v1_routes import router as api_v1_router
+from .config.settings import settings
 
 
 def ensure_nltk_data():

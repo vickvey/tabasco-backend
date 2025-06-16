@@ -3,6 +3,8 @@ from pathlib import Path
 import fitz # PyMuPDF
 from fastapi import HTTPException
 
+from app.config.settings import UPLOAD_FOLDER
+
 ALLOWED_EXTENSIONS = {"pdf", "txt"}
 
 def allowed_file(filename):
@@ -47,3 +49,11 @@ def read_file_text(file_path: Path) -> str:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
 
+def ensure_uploaded_file_exists(filename: str) -> Path:
+    """
+    Ensure the file exists in UPLOAD_FOLDER. Returns the full Path or raises HTTPException 404.
+    """
+    file_path = UPLOAD_FOLDER / filename
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
+    return file_path
