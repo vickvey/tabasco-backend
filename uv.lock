@@ -841,6 +841,7 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "transformers" },
     { name = "uv" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
@@ -856,6 +857,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.6.1" },
     { name = "transformers", specifier = ">=4.52.4" },
     { name = "uv", specifier = ">=0.7.9" },
+    { name = "uvicorn", specifier = ">=0.34.3" },
 ]
 
 [[package]]

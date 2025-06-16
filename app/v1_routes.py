@@ -1,11 +1,12 @@
+from pathlib import Path
 import shutil
-
+# from pathlib import Path
 from fastapi import APIRouter, Form, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 
-from .models import DisambModel
+# from .models import DisambModel
 from .services import TextPreprocessor
-from .config.settings import UPLOAD_FOLDER
+# from .config.settings import UPLOAD_FOLDER
 from .utils import (
     allowed_file,
     read_file_text,
@@ -13,7 +14,28 @@ from .utils import (
     ensure_uploaded_file_exists
 )
 
+# TODO: shift this to somewhere in config
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+UPLOAD_FOLDER = PROJECT_ROOT / "static" / "uploads"
+# SUMMARY_FOLDER = PROJECT_ROOT / "static" / "summary"
+# DETAILED_FOLDER = PROJECT_ROOT / "static" / "detailed"
+# LOG_DIR = PROJECT_ROOT / "logs"
+
+
 router = APIRouter()
+
+# TODO: Complete this
+# async def _process_file_and_sentences(filename: str, target_word: str = None, frequency_limit: int = 100) -> tuple[Path, str, list[str]]:
+#     """
+#     Common logic to validate file and process sentences.
+#     Returns (file_path, text, sentences).
+#     """
+#     if frequency_limit <= 0:
+#         raise HTTPException(status_code=400, detail="frequency_limit must be positive")
+#     file_path = ensure_uploaded_file_exists(filename)
+#     text = read_file_text(file_path)
+#     # sentences = TextPreprocessor.process_sentences(text, target_word, frequency_limit) if target_word else []
+#     return file_path, text, sentences
 
 @router.post('/upload')
 async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
@@ -68,15 +90,24 @@ async def get_n_top_nouns_freq(filename: str = Form(...), top_n: int = Form(50))
     nouns = TextPreprocessor.extract_top_n_nouns_with_frequency(text_content, top_n)
     return ApiResponse.success(message="Noun list retrieved with frequency", data={"nouns": nouns})
 
-@router.post("/target-matrix")
-async def target_matrix(
-        filename: str= Form(...),
-        target_word: str = Form(...),
-        frequency_limit: int = Form(100),
-        disamb_model: DisambModel = Depends(get_disamb_model)
-) -> JSONResponse:
-    pass
+# TODO: Complete this high priority
+# @router.post("/target-matrix")
+# async def target_matrix(
+#         filename: str= Form(...),
+#         target_word: str = Form(...),
+#         frequency_limit: int = Form(100),
+#         disamb_model: DisambModel = Depends(get_disamb_model)
+# ) -> JSONResponse:
+#     """
+#     Generate a target-word matrix for clustering and suggest the number of clusters.
+#     """
+#     if not target_word.strip():
+#         raise HTTPException(status_code=400, detail="target_word cannot be empty")
+#     _, text, sentences = await _process_file_and_sentences(filename, target_word, frequency_limit)
+#     if not sentences:
+#         raise HTTPException(status_code=404, detail=f"No sentences found containing the word '{target_word}'.")
 
+#     pass
 
 
 

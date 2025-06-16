@@ -1,19 +1,11 @@
-import nltk
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-
-from .utils import ApiResponse
+from .utils import (
+    ApiResponse, 
+    ensure_nltk_data
+)
 from .v1_routes import router as api_v1_router
-from .config.settings import settings
-
-
-def ensure_nltk_data():
-    for resource in ['punkt', 'stopwords', 'averaged_perceptron_tagger']:
-        try:
-            nltk.data.find(f'tokenizers/{resource}')
-        except LookupError:
-            nltk.download(resource)
-
+# from .config.settings import settings # TODO: add me
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
@@ -50,12 +42,12 @@ def init_routers(app_: FastAPI):
 
 def create_app() -> FastAPI:
     app_ = FastAPI(
-        title=settings.PROJECT_NAME,
+        title="TABASCO FastAPI",
         summary="A FastAPI REST API for detecting intra-domain ambiguities",
         description="A FastAPI REST API for detecting intra-domain ambiguities",
-        docs_url=None if settings.ENVIRONMENT == "production" else "/docs",
-        redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc",
-        version=settings.RELEASE_VERSION,
+        # docs_url=None if settings.ENVIRONMENT == "production" else "/docs", # TODO: change me
+        # redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc", # TODO: change me
+        version="1.0.0",
         lifespan=lifespan
     )
 

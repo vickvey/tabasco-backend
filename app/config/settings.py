@@ -56,15 +56,15 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "TABASCO FastAPI"
     RELEASE_VERSION: str = "1.0.0"
     HOST: str = "0.0.0.0"
-    PORT: Annotated[int, Field(ge=1024, le=65535)] = os.getenv("PORT", "8080")
+    PORT: Annotated[int, Field(ge=1024, le=65535)] = int(os.getenv("PORT", 8080))
 
     # App environment
     ENVIRONMENT: EnvironmentType = environment
 
-    # Logging
-    LOG_LEVEL: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
-    LOG_TO_FILE: bool = False
-    LOG_FILE_PATH: str = str(LOG_DIR / "app.log")
+    # TODO: Implement Logging
+    # LOG_LEVEL: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
+    # LOG_TO_FILE: bool = False
+    # LOG_FILE_PATH: str = str(LOG_DIR / "app.log")
 
     model_config = SettingsConfigDict(env_file_encoding="utf-8")
 

@@ -1,1 +1,3 @@
 from .preprocessing import TextPreprocessor
+
+from .sentence_processing import get_sentences_with_target_word

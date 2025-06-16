@@ -2,7 +2,7 @@
 name = "tabasco-fastapi"
 version = "0.1.0"
 description = "A FastAPI REST API for detecting intra-domain ambiguities"
-authors = ['Vivek Kumar']
+authors = [{ name = "Vivek Kumar", email = "vickvey0303@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -17,4 +17,5 @@ dependencies = [
     "scikit-learn>=1.6.1",
     "transformers>=4.52.4",
     "uv>=0.7.9",
+    "uvicorn>=0.34.3",
 ]
