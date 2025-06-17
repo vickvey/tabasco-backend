@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
-from app.services import TextPreprocessor
+from app.services import extract_top_n_nouns_with_frequency
+from app.services.preprocessing import _basic_clean_text
 
 import tempfile
 import fitz  # PyMuPDF
@@ -19,12 +20,12 @@ class TestTextPreprocessor(unittest.TestCase):
     def test_basic_clean_text(self):
         raw_text = "Hello, World! This is a test. 123"
         expected = "hello world this is a test 123"
-        cleaned = TextPreprocessor._basic_clean_text(raw_text)
+        cleaned = _basic_clean_text(raw_text)
         self.assertEqual(cleaned, expected)
 
     def test_extract_top_n_nouns_with_frequency(self):
         text = "The cat sat on the mat. The dog barked at the cat. The gardener planted plants in the garden."
-        result = TextPreprocessor.extract_top_n_nouns_with_frequency(text, top_n=5)
+        result = extract_top_n_nouns_with_frequency(text, top_n=5)
         self.assertIsInstance(result, dict)
         self.assertGreaterEqual(len(result), 1)
         self.assertIn("cat", result)
@@ -32,10 +33,10 @@ class TestTextPreprocessor(unittest.TestCase):
 
     def test_extract_top_n_nouns_invalid_input(self):
         with self.assertRaises(ValueError):
-            TextPreprocessor.extract_top_n_nouns_with_frequency("", top_n=10)
+            extract_top_n_nouns_with_frequency("", top_n=10)
 
         with self.assertRaises(ValueError):
-            TextPreprocessor.extract_top_n_nouns_with_frequency(12345, top_n=10)
+            extract_top_n_nouns_with_frequency(12345, top_n=10)
 
     def test_pdf2text_valid_pdf(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -74,7 +75,7 @@ class TestTextPreprocessorComplexCase(unittest.TestCase):
             leads contributed with insights about performance and strategy. BUG! BUG! BUG! BUG! BUG!
         """
 
-        result = TextPreprocessor.extract_top_n_nouns_with_frequency(sample_text, top_n=5)
+        result = extract_top_n_nouns_with_frequency(sample_text, top_n=5)
 
         # Assertions: focus on correct nouns and order by frequency
         self.assertIsInstance(result, dict)

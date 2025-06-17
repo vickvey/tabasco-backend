@@ -5,7 +5,7 @@ from fastapi import APIRouter, Form, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 
 # from .models import DisambModel
-from .services import TextPreprocessor
+from .services import extract_top_n_nouns_with_frequency
 from .config import settings
 from .utils import (
     allowed_file,
@@ -87,7 +87,7 @@ async def get_n_top_nouns_freq(filename: str = Form(...), top_n: int = Form(50))
         raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
 
     text_content = read_file_text(file_path)
-    nouns = TextPreprocessor.extract_top_n_nouns_with_frequency(text_content, top_n)
+    nouns = extract_top_n_nouns_with_frequency(text_content, top_n)
     return ApiResponse.success(message="Noun list retrieved with frequency", data={"nouns": nouns})
 
 # TODO: Complete this high priority
