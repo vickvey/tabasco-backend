@@ -1,0 +1,12 @@
+services:
+  tabasco:
+    build: .
+    ports:
+      - "${PORT}:${PORT}"  # Dynamic port from .env
+    env_file:
+      - .env
+    command: >
+      uvicorn app.server:app
+      --host ${HOST}
+      --port ${PORT}
+      --workers 4

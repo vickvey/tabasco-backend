@@ -5,7 +5,7 @@ from .utils import (
     ensure_nltk_data
 )
 from .v1_routes import router as api_v1_router
-# from .config.settings import settings # TODO: add me
+from .config import settings
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
@@ -42,12 +42,17 @@ def init_routers(app_: FastAPI):
 
 def create_app() -> FastAPI:
     app_ = FastAPI(
-        title="TABASCO FastAPI",
+        # Basic
+        title=settings.PROJECT_NAME,
         summary="A FastAPI REST API for detecting intra-domain ambiguities",
         description="A FastAPI REST API for detecting intra-domain ambiguities",
-        # docs_url=None if settings.ENVIRONMENT == "production" else "/docs", # TODO: change me
-        # redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc", # TODO: change me
-        version="1.0.0",
+        version=settings.RELEASE_VERSION,
+
+        # Docs config depending upon ENVIRONMENT
+        docs_url=None if settings.ENVIRONMENT == "production" else "/docs", 
+        redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc",
+        
+        # Configuring Lifespan
         lifespan=lifespan
     )
 
@@ -57,7 +62,6 @@ def create_app() -> FastAPI:
 
     init_routers(app_=app_)
     return app_
-
 
 # App singleton instance
 app = create_app()

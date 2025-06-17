@@ -3,9 +3,11 @@ from pathlib import Path
 import fitz # PyMuPDF
 from fastapi import HTTPException
 
-from app.config.settings import UPLOAD_FOLDER
+from app.config import settings
 
-ALLOWED_EXTENSIONS = {"pdf", "txt"}
+# Mount constants from settings
+UPLOAD_FOLDER = settings.UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = settings.ALLOWED_EXTENSIONS
 
 def allowed_file(filename):
     """

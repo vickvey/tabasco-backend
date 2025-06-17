@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Annotated
 from pydantic import Field, ValidationError
@@ -12,9 +11,10 @@ class Settings(BaseSettings):
         extra='forbid',
     )
 
-    # App Constants
+    # App Constants and Configs
     PROJECT_NAME: str = "TABASCO FastAPI"
     RELEASE_VERSION: str = "1.0.0"
+    ALLOWED_EXTENSIONS: set = {"pdf", "txt"}
 
     # Environment Variables
     ENVIRONMENT: str = Field(default="development")
@@ -42,17 +42,7 @@ class Settings(BaseSettings):
 # Singleton settings instance
 try:
     settings = Settings()
-    print(settings.ENVIRONMENT)
 except ValidationError as e:
     print(f"❌ Settings validation error: {e}")
     raise
-
-# if __name__ == "__main__":
-#     try:
-#         settings = Settings()
-#         print(f"✅ Settings loaded for environment: {settings.ENVIRONMENT}")
-#         print(f"📁 Upload folder: {settings.UPLOAD_FOLDER}")
-#     except ValidationError as e:
-#         print(f"❌ Settings validation error: {e}")
-#         raise
 

@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 # from .models import DisambModel
 from .services import TextPreprocessor
-# from .config.settings import UPLOAD_FOLDER
+from .config import settings
 from .utils import (
     allowed_file,
     read_file_text,
@@ -14,12 +14,12 @@ from .utils import (
     ensure_uploaded_file_exists
 )
 
-# TODO: shift this to somewhere in config
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-UPLOAD_FOLDER = PROJECT_ROOT / "static" / "uploads"
-# SUMMARY_FOLDER = PROJECT_ROOT / "static" / "summary"
-# DETAILED_FOLDER = PROJECT_ROOT / "static" / "detailed"
-# LOG_DIR = PROJECT_ROOT / "logs"
+# Mount path configs from config
+PROJECT_ROOT = settings.PROJECT_ROOT
+UPLOAD_FOLDER = settings.UPLOAD_FOLDER
+SUMMARY_FOLDER = settings.SUMMARY_FOLDER
+DETAILED_FOLDER = settings.DETAILED_FOLDER
+LOG_DIR = settings.LOG_DIR
 
 
 router = APIRouter()
