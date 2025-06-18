@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+from nltk.corpus import stopwords, wordnet as wn
 from .utils import (
     ApiResponse, 
     ensure_nltk_data
@@ -10,29 +11,23 @@ from .config import settings
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
     # TODO: Add Logger
-    """
-    # Configure custom logger
-    # configure_logging(log_level=settings.LOG_LEVEL, log_file=settings.LOG_FILE_PATH if settings.LOG_TO_FILE else None)
-
-    # Sync Uvicorn loggers
-    # for logger_name in ("uvicorn", "uvicorn.access"):
-    #     logging.getLogger(logger_name).handlers = []
-    #     logging.getLogger(logger_name).propagate = True
-
-    # Log startup
-    # logging.getLogger(__name__).info(
-    #     f"Starting TABASCO FastAPI application (env: {settings.RUN_ENV}, port: {settings.PORT})")
-    """
 
     # Download NLTK Resources once
     ensure_nltk_data()
 
+    # Load stopwords once
+    app.state.stop_words = set(stopwords.words("english"))
+
+    # Build ALL_NOUNS set once
+    all_nouns = set()
+    for synset in wn.all_synsets('n'):
+        for lemma in synset.lemmas():
+            all_nouns.add(lemma.name().lower())
+    app.state.all_nouns = all_nouns
+
     # TODO: Add settings
-    """
-    # Tell the type-checker that .state is an AppState
-    # state = cast(AppState, app_.state)
-    # state.settings = settings
-    """
+
+
     yield
 
 

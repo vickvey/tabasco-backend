@@ -1,11 +1,11 @@
-from pathlib import Path
+import asyncio
 import shutil
 # from pathlib import Path
-from fastapi import APIRouter, Form, HTTPException, UploadFile, File
+from fastapi import APIRouter, Form, HTTPException,Request, UploadFile, File
 from fastapi.responses import JSONResponse
 
 # from .models import DisambModel
-from .services import extract_top_n_nouns_with_frequency
+from .services import extract_top_n_nouns_with_frequency_v2
 from .config import settings
 from .utils import (
     allowed_file,
@@ -19,7 +19,7 @@ PROJECT_ROOT = settings.PROJECT_ROOT
 UPLOAD_FOLDER = settings.UPLOAD_FOLDER
 SUMMARY_FOLDER = settings.SUMMARY_FOLDER
 DETAILED_FOLDER = settings.DETAILED_FOLDER
-LOG_DIR = settings.LOG_DIR
+# LOG_DIR = settings.LOG_DIR # TODO: Complete this
 
 
 router = APIRouter()
@@ -75,19 +75,33 @@ async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
     )
 
 @router.post("/top-nouns")
-async def get_n_top_nouns_freq(filename: str = Form(...), top_n: int = Form(50)) -> JSONResponse:
+async def get_n_top_nouns_freq(
+    request: Request,
+    filename: str = Form(...),
+    top_n: int = Form(50)
+) -> JSONResponse:
     """
     Return the top-N most frequent nouns with their frequency in the uploaded file.
     """
-    if 0 >= top_n > 200:
-        raise HTTPException(status_code=400, detail="top_n must be in range [0, 200]")
+    if not (0 < top_n <= 200):
+        raise HTTPException(status_code=400, detail="top_n must be in range (0, 200]")
 
     file_path = ensure_uploaded_file_exists(filename)
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
 
     text_content = read_file_text(file_path)
-    nouns = extract_top_n_nouns_with_frequency(text_content, top_n)
+
+    stop_words = request.app.state.stop_words
+    all_nouns = request.app.state.all_nouns
+
+    nouns = await asyncio.to_thread(
+        extract_top_n_nouns_with_frequency_v2,
+        text_content,
+        top_n,
+        stop_words,
+        all_nouns
+    )
     return ApiResponse.success(message="Noun list retrieved with frequency", data={"nouns": nouns})
 
 # TODO: Complete this high priority
