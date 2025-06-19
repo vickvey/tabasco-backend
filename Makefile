@@ -27,3 +27,8 @@ dev: install
 prod: install
 	@echo "🚀 Running in production mode (ENVIRONMENT=production)..."
 	ENVIRONMENT=production uv run uvicorn app.server:app --workers 4 --host $(HOST) --port $(PORT)
+
+# Run the tests
+test: install
+	@echo "🧪 Running application tests ..."
+	uv run pytest

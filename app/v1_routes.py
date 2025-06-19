@@ -5,7 +5,7 @@ from fastapi import APIRouter, Form, HTTPException,Request, UploadFile, File
 from fastapi.responses import JSONResponse
 
 # from .models import DisambModel
-from .services import extract_top_n_nouns_with_frequency_v2
+from .services import extract_top_n_nouns_with_frequency
 from .config import settings
 from .utils import (
     allowed_file,
@@ -96,7 +96,7 @@ async def get_n_top_nouns_freq(
     all_nouns = request.app.state.all_nouns
 
     nouns = await asyncio.to_thread(
-        extract_top_n_nouns_with_frequency_v2,
+        extract_top_n_nouns_with_frequency,
         text_content,
         top_n,
         stop_words,

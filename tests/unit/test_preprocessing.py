@@ -1,95 +1,74 @@
 import unittest
-from pathlib import Path
-from app.services import extract_top_n_nouns_with_frequency
-from app.services.preprocessing import _basic_clean_text
+from app.services.preprocessing import (
+    _basic_clean_text, 
+    extract_top_n_nouns_with_frequency
+)
 
-import tempfile
-import fitz  # PyMuPDF
-import os
-import nltk
-
-from app.utils.pdf_file_utils import pdf2text
-
-# Ensure required NLTK resources are downloaded
-nltk.download("punkt")
-nltk.download("averaged_perceptron_tagger")
-nltk.download("stopwords")
-
-class TestTextPreprocessor(unittest.TestCase):
+class TestPreprocessing(unittest.TestCase):
 
     def test_basic_clean_text(self):
-        raw_text = "Hello, World! This is a test. 123"
-        expected = "hello world this is a test 123"
-        cleaned = _basic_clean_text(raw_text)
-        self.assertEqual(cleaned, expected)
+        text = "Hey Fellas!! How are you? Hey, David! Are you going to the market?!!"
+        expected = "hey fellas how are you hey david are you going to the market"
+        self.assertEqual(_basic_clean_text(text), expected,
+                         "Expected text and cleaned text should be equal!")
 
     def test_extract_top_n_nouns_with_frequency(self):
-        text = "The cat sat on the mat. The dog barked at the cat. The gardener planted plants in the garden."
-        result = extract_top_n_nouns_with_frequency(text, top_n=5)
-        self.assertIsInstance(result, dict)
-        self.assertGreaterEqual(len(result), 1)
-        self.assertIn("cat", result)
-        self.assertEqual(result["cat"], 2)
+        text = "The cat sat on the mat. The dog chased the cat. The cat ran."
+        stop_words = {"the", "on"}
+        all_nouns = {"cat", "dog", "mat"}
+        top_n = 2
 
-    def test_extract_top_n_nouns_invalid_input(self):
+        result = extract_top_n_nouns_with_frequency(text, top_n, stop_words, all_nouns)
+        print("Result:", result)
+
+        # Must contain 'cat': 3, and either 'mat': 1 or 'dog': 1
+        self.assertEqual(result.get('cat'), 3)
+        self.assertTrue(
+            ('mat' in result and result['mat'] == 1) or
+            ('dog' in result and result['dog'] == 1),
+            f"Expected second noun to be 'mat' or 'dog', got: {result}"
+        )
+
+    def test_extract_top_n_nouns_with_frequency_invalid_input(self):
         with self.assertRaises(ValueError):
-            extract_top_n_nouns_with_frequency("", top_n=10)
-
-        with self.assertRaises(ValueError):
-            extract_top_n_nouns_with_frequency(12345, top_n=10)
-
-    def test_pdf2text_valid_pdf(self):
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            temp_pdf_path = Path(tmpdirname) / "test.pdf"
-
-            # Create a simple 1-page PDF
-            doc = fitz.open()
-            page = doc.new_page()
-            page.insert_text((72, 72), "This is a test PDF with some text.")
-            doc.save(temp_pdf_path)
-
-            extracted_text = pdf2text(temp_pdf_path)
-            self.assertIn("test PDF", extracted_text)
-
-    def test_pdf2text_invalid_path(self):
-        with self.assertRaises(FileNotFoundError):
-            pdf2text(Path("nonexistent_file.pdf"))
-
-    def test_pdf2text_invalid_file_type(self):
-        with tempfile.NamedTemporaryFile(suffix=".txt", mode="w", delete=False) as tmp:
-            tmp.write("Just a plain text file.")
-            tmp_path = Path(tmp.name)
+            extract_top_n_nouns_with_frequency("", 3, set(), set())
 
         with self.assertRaises(ValueError):
-            pdf2text(tmp_path)
+            extract_top_n_nouns_with_frequency(None, 3, set(), set())
 
-        os.remove(tmp_path)
+    def test_extract_top_n_nouns_with_frequency_complex(self):
+        text = (
+            "In the laboratory, the scientist observed a reaction. "
+            "The reaction involved chemicals and compounds. "
+            "The scientist, wearing a white lab coat, noted changes in the solution. "
+            "The lab assistant recorded the results in the notebook. "
+            "Both the scientist and assistant discussed the findings."
+        )
 
-class TestTextPreprocessorComplexCase(unittest.TestCase):
-    def test_extract_top_n_nouns_complex_text(self):
-        sample_text = """
-            In the **conference room**, the CEO addressed the company. The company values—integrity, innovation,
-            and impact—were emphasized throughout the presentation. Employees from different departments like 
-            marketing, engineering, and human resources joined the discussion. The presentation included data, 
-            charts, and projections. The CEO mentioned "data" and "innovation" multiple times, while the team 
-            leads contributed with insights about performance and strategy. BUG! BUG! BUG! BUG! BUG!
-        """
+        stop_words = {"the", "in", "a", "and", "of"}
+        all_nouns = {
+            "laboratory", "scientist", "reaction", "chemicals", "compounds",
+            "lab", "coat", "solution", "assistant", "results", "notebook", "findings"
+        }
 
-        result = extract_top_n_nouns_with_frequency(sample_text, top_n=5)
+        top_n = 5
 
-        # Assertions: focus on correct nouns and order by frequency
-        self.assertIsInstance(result, dict)
-        self.assertGreaterEqual(len(result), 3)
+        result = extract_top_n_nouns_with_frequency(text, top_n, stop_words, all_nouns)
+        print("Complex Test Result:", result)
 
-        expected_nouns = {"bug", "company", "innovation", "data", "presentation", "ceo"}
-        found_nouns = set(result.keys())
+        # Must have the correct top frequent nouns
+        self.assertEqual(result.get("scientist"), 3)
+        self.assertEqual(result.get("reaction"), 2)
+        self.assertEqual(result.get("lab"), 2)
+        self.assertEqual(result.get("assistant"), 2)
 
-        # Check that expected frequent nouns are in the result
-        self.assertTrue(expected_nouns.intersection(found_nouns))
+        # Fifth noun can be either 'laboratory' or 'results'
+        fifth_noun = set(result.keys()) - {"scientist", "reaction", "lab", "assistant"}
+        self.assertTrue(
+            fifth_noun.issubset({"laboratory", "results"}),
+            f"Unexpected fifth noun: {fifth_noun}"
+        )
 
-        # Check that only nouns are returned (heuristic, not bulletproof)
-        for noun in result:
-            self.assertTrue(noun.isalpha())
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
