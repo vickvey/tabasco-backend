@@ -3,9 +3,17 @@ import shutil
 # from pathlib import Path
 from fastapi import APIRouter, Form, HTTPException,Request, UploadFile, File
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
-# from .models import DisambModel
-from .services import extract_top_n_nouns_with_frequency
+from transformers import BertModel, BertTokenizer
+import torch
+
+from .models import DisambModel
+from .services import (
+    extract_top_n_nouns_with_frequency,
+    build_target_word_similarity_matrix,
+    suggest_num_clusters_with_data
+)
 from .config import settings
 from .utils import (
     allowed_file,
@@ -21,21 +29,15 @@ SUMMARY_FOLDER = settings.SUMMARY_FOLDER
 DETAILED_FOLDER = settings.DETAILED_FOLDER
 # LOG_DIR = settings.LOG_DIR # TODO: Complete this
 
+# Load model once globally
+tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+bert_model = BertModel.from_pretrained("bert-base-uncased", output_hidden_states=True)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+disamb_model = DisambModel(bert_model, tokenizer, device)
+
 
 router = APIRouter()
 
-# TODO: Complete this
-# async def _process_file_and_sentences(filename: str, target_word: str = None, frequency_limit: int = 100) -> tuple[Path, str, list[str]]:
-#     """
-#     Common logic to validate file and process sentences.
-#     Returns (file_path, text, sentences).
-#     """
-#     if frequency_limit <= 0:
-#         raise HTTPException(status_code=400, detail="frequency_limit must be positive")
-#     file_path = ensure_uploaded_file_exists(filename)
-#     text = read_file_text(file_path)
-#     # sentences = TextPreprocessor.process_sentences(text, target_word, frequency_limit) if target_word else []
-#     return file_path, text, sentences
 
 @router.post('/upload')
 async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
@@ -113,24 +115,54 @@ async def get_n_top_nouns_freq(
     )
     return ApiResponse.success(message="Noun list retrieved with frequency", data={"nouns": nouns})
 
-# TODO: Complete this high priority
-# @router.post("/target-matrix")
-# async def target_matrix(
-#         filename: str= Form(...),
-#         target_word: str = Form(...),
-#         frequency_limit: int = Form(100),
-#         disamb_model: DisambModel = Depends(get_disamb_model)
-# ) -> JSONResponse:
-#     """
-#     Generate a target-word matrix for clustering and suggest the number of clusters.
-#     """
-#     if not target_word.strip():
-#         raise HTTPException(status_code=400, detail="target_word cannot be empty")
-#     _, text, sentences = await _process_file_and_sentences(filename, target_word, frequency_limit)
-#     if not sentences:
-#         raise HTTPException(status_code=404, detail=f"No sentences found containing the word '{target_word}'.")
 
-#     pass
+class TargetMatrixRequest(BaseModel):
+    filename: str
+    target_word: str
+    frequency: int
+
+
+@router.post("/target-matrix")
+async def get_target_matrix_api(data: TargetMatrixRequest) -> JSONResponse:
+    """
+    Build a similarity matrix for sentences containing the target word in the given file,
+    and return the optimal number of clusters and elbow plot data.
+    """
+    # Validate file
+    file_path = ensure_uploaded_file_exists(data.filename)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"File '{data.filename}' not found.")
+
+    # Read text
+    text_content = read_file_text(file_path)
+    if not text_content:
+        raise HTTPException(status_code=400, detail="The file contains no readable text.")
+
+    try:
+        matrix, sentences = build_target_word_similarity_matrix(
+            text_content=text_content,
+            target_word=data.target_word,
+            model=disamb_model,
+            frequency_limit=data.frequency
+        )
+
+        opt_k, k_range, wcss = suggest_num_clusters_with_data(matrix)
+
+        return ApiResponse.success(
+            message="Target matrix generated successfully.",
+            data={
+                "target_word": data.target_word,
+                "sentence_count": len(sentences),
+                "matrix_shape": list(matrix.shape),
+                "optimal_k": int(opt_k),
+                "k_range": [int(k) for k in k_range],
+                "wcss": [float(w) for w in wcss],
+            }
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Matrix generation failed: {str(e)}")
+
 
 
 

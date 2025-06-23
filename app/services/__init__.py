@@ -1,6 +1,7 @@
-from .preprocessing import (
-    extract_top_n_nouns_with_frequency, 
-
-)
+from .preprocessing import extract_top_n_nouns_with_frequency 
 
 from .sentence_processing import get_sentences_with_target_word
+
+from .target_matrix import build_target_word_similarity_matrix
+
+from .clustering import suggest_num_clusters_with_data
