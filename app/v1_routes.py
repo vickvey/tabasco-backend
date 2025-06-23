@@ -74,6 +74,15 @@ async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
         },
     )
 
+# TODO: This is dev only route
+@router.get('/view-txt-files')
+async def get_uploaded_text_filenames() -> JSONResponse:
+    filenames = []
+    for file in UPLOAD_FOLDER.iterdir():
+        if file.is_file() and file.suffix == '.txt':
+            filenames.append(file.name)
+    return JSONResponse(content={"filenames": filenames})
+
 @router.post("/top-nouns")
 async def get_n_top_nouns_freq(
     request: Request,

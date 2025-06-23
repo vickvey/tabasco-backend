@@ -7,3 +7,5 @@ from .pdf_file_utils import (
 from .api_response import ApiResponse
 
 from .custom_nltk import ensure_nltk_data
+
+from .running_time import timed_memory_profile

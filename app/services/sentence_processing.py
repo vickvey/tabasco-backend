@@ -107,7 +107,7 @@ def get_sentences_with_target_word(
 
     for sent in sentences:
         if re.search(rf'\b{re.escape(target_word.lower())}\b', sent.lower()):
-            tokens = tokenizer.tokenize(f"[CLS] {sent} [SEP]")
+            tokens = tokenizer.tokenize(f"{tokenizer.cls_token} {sent} {tokenizer.sep_token}")
             if len(tokens) <= max_length:
                 target_sentences.append(sent)
             else:
@@ -119,7 +119,7 @@ def get_sentences_with_target_word(
                     start = max(0, target_idx - window_size)
                     end = min(len(words), target_idx + window_size + 1)
                     truncated_sent = " ".join(words[start:end])
-                    tokens = tokenizer.tokenize(f"[CLS] {truncated_sent} [SEP]")
+                    tokens = tokenizer.tokenize(f"{tokenizer.cls_token} {truncated_sent} {tokenizer.sep_token}")
                     if len(tokens) <= max_length and target_word.lower() in truncated_sent.lower():
                         target_sentences.append(truncated_sent)
                         print(f"Truncated sentence to {len(tokens)} tokens: {truncated_sent[:100]}...")
