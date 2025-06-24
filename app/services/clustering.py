@@ -1,19 +1,19 @@
 from sklearn.cluster import KMeans
 from kneed import KneeLocator
 
-def get_clusters(matrix, num_clusters):
+def _get_clusters(matrix, num_clusters):
     X = matrix.numpy()
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
     return kmeans.fit_predict(X).tolist()
 
-def label_sentences_by_cluster(sentences, matrix, num_clusters):
-    labels = get_clusters(matrix, num_clusters)
+def _label_sentences_by_cluster(sentences, matrix, num_clusters):
+    labels = _get_clusters(matrix, num_clusters)
     cluster_dict = {}
     for sent, label in zip(sentences, labels):
         cluster_dict.setdefault(label, []).append(sent)
     return cluster_dict
 
-def suggest_num_clusters(matrix):
+def _suggest_num_clusters(matrix):
     X = matrix.numpy()
     wcss = []
     for i in range(1, min(11, X.shape[0] + 1)):

@@ -10,10 +10,15 @@ from .config import settings
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
-    # TODO: Add Logger
+    # TODO: Add Logger [LOW-PRIORITY]
 
     # Download NLTK Resources once
     ensure_nltk_data()
+
+    # TODO: Setup these [HIGH-PRIORITY]
+    # bert_model = BertModel.from_pretrained("bert-base-uncased", output_hidden_states=True)
+    # bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load stopwords once
     app.state.stop_words = set(stopwords.words("english"))
@@ -25,7 +30,7 @@ async def lifespan(app_: FastAPI):
             all_nouns.add(lemma.name().lower())
     app.state.all_nouns = all_nouns
 
-    # TODO: Add settings
+    # TODO: Add settings [LOW-PRIORITY]
 
 
     yield

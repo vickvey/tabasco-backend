@@ -11,12 +11,15 @@ from sklearn.manifold import TSNE
 
 
 class DisambModel:
-    """
-    Wrapper around BERT to extract contextual embeddings:
-    - Target word embedding
-    - Sentence embedding
+    """Wrapper around BERT to extract contextual embeddings for word sense disambiguation.
+
+    Provides methods to extract:
+    - Target word embeddings
+    - Sentence embeddings via mean-pooling
     - Token embeddings for all tokens
     - Context tokens most similar to a target word
+    - Visualization of token embeddings
+    - Saving embeddings to files
     """
 
     def __init__(
@@ -25,47 +28,43 @@ class DisambModel:
         tokenizer: BertTokenizer,
         device: torch_device
     ) -> None:
-        """
-        Initializes the DisambModel with a pre-trained BERT model and tokenizer.
+        """Initialize the DisambModel with a pre-trained BERT model and tokenizer.
 
         Args:
-            model (BertModel): A pre-trained BERT model from HuggingFace Transformers.
-            tokenizer (BertTokenizer): The tokenizer associated with the BERT model.
-            device (torch.device): The device (CPU or CUDA) to move the model to.
+            model (BertModel): Pre-trained BERT model from HuggingFace Transformers.
+            tokenizer (BertTokenizer): Tokenizer associated with the BERT model.
+            device (torch.device): Device (CPU or CUDA) for model inference.
 
-        Sets up the model for inference by:
-            - Enabling output of hidden states.
-            - Switching to evaluation mode.
-            - Moving the model to the specified device.
+        Notes:
+            - Configures model to output hidden states.
+            - Sets model to evaluation mode.
+            - Moves model to the specified device.
         """
-
         model.config.output_hidden_states = True
         model.eval()
-
-        self.model = model.to(device) # type: ignore
+        self.model = model.to(device)  # type: ignore
         self.tokenizer = tokenizer
         self.device = device
 
     @staticmethod
     def _find_subword_span(tokens: List[str], target_tokens: List[str]) -> Tuple[int, int]:
-        """
-        Finds the start and end indices of a sequence of target subword tokens 
-        within a larger list of tokens.
+        """Find the start and end indices of target subword tokens in a token list.
 
         Args:
-            tokens (List[str]): The full list of tokenized subwords (e.g., from a sentence).
-            target_tokens (List[str]): The tokenized subwords representing the target word or phrase.
+            tokens (List[str]): List of tokenized subwords from a sentence.
+            target_tokens (List[str]): Tokenized subwords of the target word/phrase.
 
         Returns:
-            Tuple[int, int]: A tuple (start_index, end_index) indicating the span of the target tokens.
+            Tuple[int, int]: Start and end indices of the target tokens.
 
         Raises:
-            ValueError: If the target_tokens sequence is not found in the tokens list.
+            ValueError: If target_tokens are not found in the token list.
 
         Example:
-            tokens = ["[CLS]", "I", "love", "em", "##bed", "##ding", "models", "[SEP]"]
-            target_tokens = ["em", "##bed", "##ding"]
-            Output: (3, 5)
+            >>> tokens = ["[CLS]", "I", "love", "em", "##bed", "##ding", "[SEP]"]
+            >>> target_tokens = ["em", "##bed", "##ding"]
+            >>> DisambModel._find_subword_span(tokens, target_tokens)
+            (3, 5)
         """
         span_len = len(target_tokens)
         for idx in range(len(tokens) - span_len + 1):
@@ -74,6 +73,20 @@ class DisambModel:
         raise ValueError(f"Target tokens {target_tokens} not found in token list.")
 
     def forward(self, input_sentence: str, target_word: str) -> torch.Tensor:
+        """Extract contextual embedding for a target word in a sentence.
+
+        Averages the embeddings of the target word's subword tokens from the last four BERT layers.
+
+        Args:
+            input_sentence (str): Sentence containing the target word.
+            target_word (str): Word/phrase to extract embedding for.
+
+        Returns:
+            torch.Tensor: Averaged embedding vector for the target word (shape: [768]).
+
+        Raises:
+            ValueError: If the target word is not found in the sentence.
+        """
         marked_text = f"{self.tokenizer.cls_token} {input_sentence} {self.tokenizer.sep_token}"
         tokens = self.tokenizer.tokenize(marked_text)
         target_tokens = self.tokenizer.tokenize(target_word.lower())
@@ -90,8 +103,8 @@ class DisambModel:
             max_length=512,
             return_tensors="pt"
         )
-        input_ids = encodings["input_ids"].to(self.device) # type: ignore
-        token_type_ids = torch.ones_like(input_ids).to(self.device) 
+        input_ids = encodings["input_ids"].to(self.device)  # type: ignore
+        token_type_ids = torch.ones_like(input_ids).to(self.device)
 
         with torch.no_grad():
             outputs = self.model(input_ids, token_type_ids=token_type_ids)
@@ -106,6 +119,20 @@ class DisambModel:
         return target_emb
 
     def get_context_words(self, sentence: str, target_word: str, top_k: int = 10) -> List[Tuple[str, float]]:
+        """Get top-k tokens most similar to the target word based on cosine similarity.
+
+        Args:
+            sentence (str): Input sentence.
+            target_word (str): Target word/phrase.
+            top_k (int, optional): Number of similar tokens to return. Defaults to 10.
+
+        Returns:
+            List[Tuple[str, float]]: List of (token, similarity_score) pairs, sorted by score.
+
+        Notes:
+            - Excludes special tokens ([CLS], [SEP]) and the target word itself.
+            - Returns empty list if target word is not found.
+        """
         marked_text = f"{self.tokenizer.cls_token} {sentence} {self.tokenizer.sep_token}"
         tokens = self.tokenizer.tokenize(marked_text)
         target_tokens = self.tokenizer.tokenize(target_word.lower())
@@ -120,7 +147,7 @@ class DisambModel:
             add_special_tokens=False,
             return_tensors="pt"
         )
-        input_ids = encodings["input_ids"].to(self.device) # type: ignore
+        input_ids = encodings["input_ids"].to(self.device)  # type: ignore
         token_type_ids = torch.ones_like(input_ids).to(self.device)
 
         with torch.no_grad():
@@ -138,7 +165,7 @@ class DisambModel:
         for idx, token_str in enumerate(tokens):
             if idx in range(first_start, first_end + 1):
                 continue
-            if token_str in {self.tokenizer.cls_token, self.tokenizer.sep_token}: # type: ignore
+            if token_str in {self.tokenizer.cls_token, self.tokenizer.sep_token}:  # type: ignore
                 continue
             score = F.cosine_similarity(
                 target_vector.unsqueeze(0),
@@ -151,8 +178,15 @@ class DisambModel:
         return similarities[:top_k]
 
     def get_sentence_embedding(self, sentence: str) -> torch.Tensor:
-        """
-        Returns a sentence embedding by mean-pooling token embeddings.
+        """Compute sentence embedding by mean-pooling token embeddings.
+
+        Uses the last four BERT layers for each token.
+
+        Args:
+            sentence (str): Input sentence.
+
+        Returns:
+            torch.Tensor: Sentence embedding vector (shape: [768]).
         """
         marked_text = f"{self.tokenizer.cls_token} {sentence} {self.tokenizer.sep_token}"
         encodings = self.tokenizer.encode_plus(
@@ -162,7 +196,7 @@ class DisambModel:
             max_length=512,
             return_tensors="pt"
         )
-        input_ids = encodings["input_ids"].to(self.device) # type: ignore
+        input_ids = encodings["input_ids"].to(self.device)  # type: ignore
         token_type_ids = torch.ones_like(input_ids).to(self.device)
 
         with torch.no_grad():
@@ -179,8 +213,13 @@ class DisambModel:
         return sentence_emb
 
     def get_all_token_vectors(self, sentence: str) -> List[Tuple[str, torch.Tensor]]:
-        """
-        Returns a list of (token, vector) for every token in the sentence.
+        """Retrieve embeddings for all tokens in a sentence.
+
+        Args:
+            sentence (str): Input sentence.
+
+        Returns:
+            List[Tuple[str, torch.Tensor]]: List of (token, embedding) pairs, including special tokens.
         """
         marked_text = f"{self.tokenizer.cls_token} {sentence} {self.tokenizer.sep_token}"
         tokens = self.tokenizer.tokenize(marked_text)
@@ -192,7 +231,7 @@ class DisambModel:
             max_length=512,
             return_tensors="pt"
         )
-        input_ids = encodings["input_ids"].to(self.device) # type: ignore
+        input_ids = encodings["input_ids"].to(self.device)  # type: ignore
         token_type_ids = torch.ones_like(input_ids).to(self.device)
 
         with torch.no_grad():
@@ -207,7 +246,20 @@ class DisambModel:
 
         return token_vectors
 
-    def visualize(self, sentence: str, method: str = "pca"):
+    def visualize(self, sentence: str, method: str = "pca") -> None:
+        """Visualize token embeddings in 2D using PCA or t-SNE.
+
+        Args:
+            sentence (str): Input sentence.
+            method (str, optional): Dimensionality reduction method ("pca" or "tsne"). Defaults to "pca".
+
+        Raises:
+            ValueError: If method is not "pca" or "tsne".
+
+        Notes:
+            - Displays a scatter plot with token labels.
+            - Requires a graphical environment for matplotlib.
+        """
         token_vecs = self.get_all_token_vectors(sentence)
         tokens = [t for t, _ in token_vecs]
         vectors = torch.stack([v for _, v in token_vecs]).cpu().numpy()
@@ -228,17 +280,23 @@ class DisambModel:
         plt.title(f"{method.upper()} of Token Embeddings")
         plt.grid(True)
         plt.show()
-    
-    def save_to_file(self, sentence: str, path: str, format: str = "pt"):
-        """
-        Save all token vectors from a sentence to a file.
-        :param format: 'pt' (torch), 'npy' (numpy), or 'json'
+
+    def save_to_file(self, sentence: str, path: str, format: str = "pt") -> None:
+        """Save token embeddings to a file.
+
+        Args:
+            sentence (str): Input sentence.
+            path (str): File path to save embeddings.
+            format (str, optional): File format ("pt", "npy", or "json"). Defaults to "pt".
+
+        Raises:
+            ValueError: If format is not "pt", "npy", or "json".
         """
         token_vecs = self.get_all_token_vectors(sentence)
         if format == "pt":
             torch.save({t: v for t, v in token_vecs}, path)
         elif format == "npy":
-            np.save(path, {t: v.cpu().numpy() for t, v in token_vecs}) # type: ignore
+            np.save(path, {t: v.cpu().numpy() for t, v in token_vecs})  # type: ignore
         elif format == "json":
             data = {t: v.cpu().tolist() for t, v in token_vecs}
             with open(path, "w") as f:

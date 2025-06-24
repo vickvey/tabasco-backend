@@ -40,7 +40,7 @@ def build_target_word_similarity_matrix(
     target_word: str,
     model: DisambModel,
     frequency_limit: int = 100,
-    save_path: str = None
+    save_path: str | None = None
 ) -> Tuple[torch.Tensor, List[str]]:
     """
     Full pipeline: extract sentences, compute similarity matrix, optionally save.
