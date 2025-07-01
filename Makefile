@@ -16,17 +16,17 @@ install: $(VENV)/bin/python
 # Run the server using .env config
 run: install
 	@echo "🚀 Running with .env config (ENVIRONMENT = $(ENVIRONMENT))..."
-	uv run uvicorn app.server:app --host $(HOST) --port $(PORT)
+	uv run uvicorn src.server:app --host $(HOST) --port $(PORT)
 
 # Dev server with reload and docs
 dev: install
 	@echo "🔧 Running in development mode (ENVIRONMENT=development)..."
-	ENVIRONMENT=development uv run uvicorn app.server:app --reload --host $(HOST) --port $(PORT)
+	ENVIRONMENT=development uv run uvicorn src.server:app --reload --host $(HOST) --port $(PORT)
 
 # Production server with multiple workers
 prod: install
 	@echo "🚀 Running in production mode (ENVIRONMENT=production)..."
-	ENVIRONMENT=production uv run uvicorn app.server:app --workers 4 --host $(HOST) --port $(PORT)
+	ENVIRONMENT=production uv run uvicorn src.server:app --workers 4 --host $(HOST) --port $(PORT)
 
 # Run the tests
 test: install

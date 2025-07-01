@@ -4,6 +4,7 @@ sentence_processing.py
 Utilities for extracting sentences from a block of text that contain a specific target word,
 while ensuring compatibility with BERT tokenizer input limits. Sentences are cleaned,
 filtered, and truncated if necessary to fit within token length constraints.
+
 """
 
 import re
@@ -12,6 +13,7 @@ from nltk.tokenize import sent_tokenize
 from transformers import BertTokenizer
 
 
+# TODO: Update this to use global app.state waala tokenizer
 @lru_cache(maxsize=1)
 def _get_tokenizer():
     """

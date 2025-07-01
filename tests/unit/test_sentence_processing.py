@@ -1,4 +1,4 @@
-from app.services import get_sentences_with_target_word
+from src.services import get_sentences_with_target_word
 
 sample_text = """
 Machine learning is a subset of artificial intelligence. 

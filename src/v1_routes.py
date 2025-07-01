@@ -1,13 +1,9 @@
 import asyncio
 import shutil
-# from pathlib import Path
 from fastapi import APIRouter, Form, HTTPException,Request, UploadFile, File
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-
 from transformers import BertModel, BertTokenizer
 import torch
-
 from .models import DisambModel
 from .services import (
     extract_top_n_nouns_with_frequency,
@@ -76,7 +72,7 @@ async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
         },
     )
 
-# TODO: This is dev only route
+# INFO: This is dev only route
 @router.get('/view-txt-files')
 async def get_uploaded_text_filenames() -> JSONResponse:
     filenames = []
@@ -116,22 +112,21 @@ async def get_n_top_nouns_freq(
     return ApiResponse.success(message="Noun list retrieved with frequency", data={"nouns": nouns})
 
 
-class TargetMatrixRequest(BaseModel):
-    filename: str
-    target_word: str
-    frequency: int
-
-
 @router.post("/target-matrix")
-async def get_target_matrix_api(data: TargetMatrixRequest) -> JSONResponse:
+async def get_target_matrix_api(
+    request: Request,
+    filename: str = Form(...),
+    target_word: str = Form(...),
+    frequency: int = Form(...)
+) -> JSONResponse:
     """
     Build a similarity matrix for sentences containing the target word in the given file,
     and return the optimal number of clusters and elbow plot data.
     """
     # Validate file
-    file_path = ensure_uploaded_file_exists(data.filename)
+    file_path = ensure_uploaded_file_exists(filename)
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"File '{data.filename}' not found.")
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
 
     # Read text
     text_content = read_file_text(file_path)
@@ -141,9 +136,9 @@ async def get_target_matrix_api(data: TargetMatrixRequest) -> JSONResponse:
     try:
         matrix, sentences = build_target_word_similarity_matrix(
             text_content=text_content,
-            target_word=data.target_word,
-            model=disamb_model,
-            frequency_limit=data.frequency
+            target_word=target_word,
+            model=request.app.state.disamb_model,  # Assuming disamb_model is stored in app state
+            frequency_limit=frequency
         )
 
         opt_k, k_range, wcss = suggest_num_clusters_with_data(matrix)
@@ -151,7 +146,7 @@ async def get_target_matrix_api(data: TargetMatrixRequest) -> JSONResponse:
         return ApiResponse.success(
             message="Target matrix generated successfully.",
             data={
-                "target_word": data.target_word,
+                "target_word": target_word,
                 "sentence_count": len(sentences),
                 "matrix_shape": list(matrix.shape),
                 "optimal_k": int(opt_k),
@@ -162,7 +157,6 @@ async def get_target_matrix_api(data: TargetMatrixRequest) -> JSONResponse:
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Matrix generation failed: {str(e)}")
-
 
 
 

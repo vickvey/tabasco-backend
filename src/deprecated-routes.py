@@ -2,10 +2,10 @@
 from pathlib import Path
 from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import JSONResponse
-from app.utils.standardize import pdf2text
-from app.services.sentence_processing import TextProcessingService
-from app.config.settings import UPLOAD_FOLDER
-from app.utils.api_response import ApiResponse
+from src.utils import pdf2text
+from src.services.sentence_processing import TextProcessingService
+from src.config import UPLOAD_FOLDER
+from src.utils.api_response import ApiResponse
 
 router = APIRouter()
 

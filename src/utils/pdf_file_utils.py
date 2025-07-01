@@ -3,7 +3,7 @@ from pathlib import Path
 import fitz # PyMuPDF
 from fastapi import HTTPException
 
-from app.config import settings
+from src.config import settings
 
 # Mount constants from settings
 UPLOAD_FOLDER = settings.UPLOAD_FOLDER

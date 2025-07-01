@@ -1,5 +1,5 @@
 import unittest
-from app.services.preprocessing import (
+from src.services.preprocessing import (
     _basic_clean_text, 
     extract_top_n_nouns_with_frequency
 )

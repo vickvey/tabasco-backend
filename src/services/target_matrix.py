@@ -1,11 +1,11 @@
-# app/services/generate_similarity_matrix.py
+# src/services/generate_similarity_matrix.py
 
 import torch
 import os
 import pickle
 from typing import List, Tuple
-from app.models.disamb_model import DisambModel
-from app.services.sentence_processing import get_sentences_with_target_word
+from src.models.disamb_model import DisambModel
+from src.services.sentence_processing import get_sentences_with_target_word
 
 
 def compute_cosine_similarity_matrix(
