@@ -1,4 +1,3 @@
-# services/file_generation.py
 from nltk.tokenize import word_tokenize
 
 def generate_summary_files(target_word, clusters_dict, summary_folder_path, disamb_model=None):

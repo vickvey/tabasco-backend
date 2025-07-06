@@ -7,4 +7,6 @@ from .target_matrix import (
     build_target_word_similarity_matrix
 )
 
-from .clustering import suggest_num_clusters_with_data
+from .clustering import (
+    suggest_num_clusters_with_data,
+    label_sentences_by_cluster)

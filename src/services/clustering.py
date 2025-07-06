@@ -1,29 +1,7 @@
 from sklearn.cluster import KMeans
 from kneed import KneeLocator
 
-def _get_clusters(matrix, num_clusters):
-    X = matrix.numpy()
-    kmeans = KMeans(n_clusters=num_clusters, random_state=42)
-    return kmeans.fit_predict(X).tolist()
-
-def _label_sentences_by_cluster(sentences, matrix, num_clusters):
-    labels = _get_clusters(matrix, num_clusters)
-    cluster_dict = {}
-    for sent, label in zip(sentences, labels):
-        cluster_dict.setdefault(label, []).append(sent)
-    return cluster_dict
-
-def _suggest_num_clusters(matrix):
-    X = matrix.numpy()
-    wcss = []
-    for i in range(1, min(11, X.shape[0] + 1)):
-        kmeans = KMeans(n_clusters=i, init="k-means++", max_iter=300, n_init=10, random_state=42)
-        kmeans.fit(X)
-        wcss.append(kmeans.inertia_)
-    if len(wcss) < 2:
-        return 1
-    kn = KneeLocator(range(1, len(wcss) + 1), wcss, curve='convex', direction='decreasing')
-    return kn.knee or 1
+# TODO: Look for a PCA in original app.py in get_clusters function [Might be something]
 
 def suggest_num_clusters_with_data(matrix):
     """
@@ -49,3 +27,17 @@ def suggest_num_clusters_with_data(matrix):
 
     kn = KneeLocator(k_range, wcss, curve='convex', direction='decreasing')
     return kn.knee or 1, k_range, wcss
+
+def _get_clusters(matrix, num_clusters):
+    X = matrix.numpy()
+    kmeans = KMeans(n_clusters=num_clusters, random_state=42)
+    return kmeans.fit_predict(X).tolist()
+
+def label_sentences_by_cluster(sentences, matrix, num_clusters: int):
+    labels = _get_clusters(matrix, num_clusters)
+    cluster_dict = {}
+    for sent, label in zip(sentences, labels):
+        cluster_dict.setdefault(label, []).append(sent)
+    return cluster_dict
+
+

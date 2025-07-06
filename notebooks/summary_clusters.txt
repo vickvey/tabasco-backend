@@ -1,10 +1,20 @@
 Cluster 0:
-  - he married in and after narrowly escaping internment as german citizen during world war ii he completed phd and took up work as psychologist at an emergency hospital
-  - improvements in communications and computer technology and possibilities opened up by arti cial intelligence then growing eld thanks to advances made during world war ii led to new way of thinking about the brain as an information processor
-  - after completing high school at the end of world war ii he became sailor and helped smuggle jewish refugees into palestine
+  - availability requirements the system shall have an availability of
+  - the system should not need intervention from outside users other than the supervisor to maintain operation of themas
+  - efficiency requirements the system shall perform searches via dijkstra shortest path algorithm
 
 Cluster 1:
-  - people believe that their viewpoint of the world is the objective truth
-  - this is futile because only person who has strong sense of self and can stand rmly within their own understanding of the world is able to give freely to others and love in an authentic way
-  - children are not mini adults who simply do not yet know as much as adults rather they see the world differently and interact with it in wholly distinct way
+  - outputs operational parameters establish valid temperature range srs introduction the themas system shall onl respond to temperatures that are within reasonable value
+  - the threshold system must be deployable in xc threshold
+  - wire connectivity to the all source analysis system asas
+
+Cluster 2:
+  - system displays the account home page to administrator
+  - system displays an account home page to customer
+  - system displays account home page to the customer alternative scenario
+
+Cluster 3:
+  - sss the tcs shall provide the system functionality necessary to generate payload plan that as minimum shall include the following information sss
+  - other requirements the system hardware shall be fixed and patched via an internet connection
+  - determine utilization initialize system system reports user characteristics general constraints assumptions and dependencies operating system assumptions thermostat hardware assumptions heating cooling hardware assumptions engineering requirements
 
