@@ -2,9 +2,6 @@ import asyncio
 import shutil
 from fastapi import APIRouter, Form, HTTPException,Request, UploadFile, File
 from fastapi.responses import JSONResponse
-from transformers import BertModel, BertTokenizer
-import torch
-from .models import DisambModel
 from .services import (
     extract_top_n_nouns_with_frequency,
     build_target_word_similarity_matrix,
@@ -18,22 +15,14 @@ from .utils import (
     ensure_uploaded_file_exists
 )
 
-# Mount path configs from config
+# Mount path configs from settings
 PROJECT_ROOT = settings.PROJECT_ROOT
 UPLOAD_FOLDER = settings.UPLOAD_FOLDER
 SUMMARY_FOLDER = settings.SUMMARY_FOLDER
 DETAILED_FOLDER = settings.DETAILED_FOLDER
 # LOG_DIR = settings.LOG_DIR # TODO: Complete this
 
-# Load model once globally
-tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-bert_model = BertModel.from_pretrained("bert-base-uncased", output_hidden_states=True)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-disamb_model = DisambModel(bert_model, tokenizer, device)
-
-
 router = APIRouter()
-
 
 @router.post('/upload')
 async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
@@ -72,7 +61,7 @@ async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
         },
     )
 
-# INFO: This is dev only route
+# INFO: This is dev only route, Remove in production
 @router.get('/view-txt-files')
 async def get_uploaded_text_filenames() -> JSONResponse:
     filenames = []

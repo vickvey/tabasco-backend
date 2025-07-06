@@ -36,10 +36,10 @@ class ApiResponse:
     def error(
         message: str,
         status_code: int = 400,
-        error_data: Optional[Any] = None,
+        errors: Optional[Any] = None,
     ) -> JSONResponse:
         """
         Standard error response.
         """
         print(f"[RESPONSE]: Error - {status_code} - {message}")
-        return ApiResponse.send(False, status_code, message, error_data)
+        return ApiResponse.send(False, status_code, message, errors)
