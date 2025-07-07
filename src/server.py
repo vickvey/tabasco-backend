@@ -9,7 +9,8 @@ from .utils import (
     ensure_nltk_data
 )
 from .models import DisambModel
-from .v1_routes import router as api_v1_router
+# from .v1_routes import router as api_v1_router
+from .routers import router as api_router
 from .config import settings
 
 
@@ -51,10 +52,8 @@ async def lifespan(app: FastAPI):
     # TODO: Add settings [LOW-PRIORITY]
     yield
 
-
 def init_routers(app: FastAPI):
-    app.include_router(api_v1_router, prefix='/api/v1')
-
+    app.include_router(api_router, prefix='/api')
 
 def create_app() -> FastAPI:
     app = FastAPI(
