@@ -10,3 +10,7 @@ from .target_matrix import (
 from .clustering import (
     suggest_num_clusters_with_data,
     label_sentences_by_cluster)
+
+from .report_generation import (
+    generate_summary_files
+)

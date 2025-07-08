@@ -79,31 +79,9 @@ def get_sentences_with_target_word(
     target_word: str,
     frequency_limit: int = 100,
     max_length: int = 510
-) -> list[str]:
-    """
-    Extract sentences from text that contain a specific target word.
-
-    Sentences are:
-    - Identified by checking if they contain the `target_word` (case-insensitive, exact match).
-    - Filtered to ensure tokenized form fits within `max_length` tokens (BERT limit).
-    - Truncated around the target word if they are too long.
-    - Standardized using `_standardize_text` before being returned.
-
-    Args:
-        text_content (str): The input text from which to extract sentences.
-        target_word (str): The word to search for in the sentences.
-        frequency_limit (int, optional): Maximum number of sentences to return. Defaults to 100.
-        max_length (int, optional): Maximum token length for BERT input. Defaults to 510.
-
-    Returns:
-        list[str]: A list of filtered, truncated, and cleaned sentences containing the target word.
-    """
+) -> list[tuple[str, str]]:
     tokenizer = _get_tokenizer()
-
-    # Normalize and clean raw text
     text = " ".join(text_content.split()).replace("\n", " ").replace("\r", " ")
-
-    # Split into individual sentences
     sentences = sent_tokenize(text)
     target_sentences = []
 
@@ -111,9 +89,8 @@ def get_sentences_with_target_word(
         if re.search(rf'\b{re.escape(target_word.lower())}\b', sent.lower()):
             tokens = tokenizer.tokenize(f"{tokenizer.cls_token} {sent} {tokenizer.sep_token}")
             if len(tokens) <= max_length:
-                target_sentences.append(sent)
+                target_sentences.append((sent, _standardize_text(sent)))
             else:
-                # Attempt to truncate around the target word
                 words = sent.split()
                 target_idx = next((i for i, w in enumerate(words) if w.lower() == target_word.lower()), None)
                 if target_idx is not None:
@@ -123,7 +100,6 @@ def get_sentences_with_target_word(
                     truncated_sent = " ".join(words[start:end])
                     tokens = tokenizer.tokenize(f"{tokenizer.cls_token} {truncated_sent} {tokenizer.sep_token}")
                     if len(tokens) <= max_length and target_word.lower() in truncated_sent.lower():
-                        target_sentences.append(truncated_sent)
-                        print(f"Truncated sentence to {len(tokens)} tokens: {truncated_sent[:100]}...")
+                        target_sentences.append((truncated_sent, _standardize_text(truncated_sent)))
 
-    return _filter_sentences(target_sentences[:frequency_limit])
+    return target_sentences[:frequency_limit]

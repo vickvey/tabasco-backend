@@ -2,17 +2,15 @@
 
 import torch
 import os
-import pickle
-from typing import List, Tuple
 from src.models.disamb_model import DisambModel
 from src.services.sentence_processing import get_sentences_with_target_word
 
 
 def compute_cosine_similarity_matrix(
-    sentences: List[str],
+    sentences: list[str],
     target_word: str,
     model: DisambModel
-) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+) -> tuple[torch.Tensor, list[torch.Tensor]]:
     """
     Given a list of sentences, compute target word embeddings and return cosine similarity matrix.
     """
@@ -41,15 +39,14 @@ def build_target_word_similarity_matrix(
     model: DisambModel,
     frequency_limit: int = 100,
     save_path: str | None = None
-) -> Tuple[torch.Tensor, List[str]]:
-    """
-    Full pipeline: extract sentences, compute similarity matrix, optionally save.
-    """
-    sentences = get_sentences_with_target_word(text_content, target_word, frequency_limit=frequency_limit)
-    similarity_matrix, _ = compute_cosine_similarity_matrix(sentences, target_word, model)
+) -> tuple[torch.Tensor, list[str]]:
+    sentence_pairs = get_sentences_with_target_word(text_content, target_word, frequency_limit=frequency_limit)
+    sentences_cleaned = [pair[1] for pair in sentence_pairs]
+    sentences_original = [pair[0] for pair in sentence_pairs]
+    similarity_matrix, _ = compute_cosine_similarity_matrix(sentences_cleaned, target_word, model)
 
     if save_path:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         torch.save(similarity_matrix, save_path)
         print(f"[✓] Saved similarity matrix of shape {similarity_matrix.shape} to {save_path}")
-    return similarity_matrix, sentences
+    return similarity_matrix, sentences_original

@@ -8,7 +8,39 @@ from typing import List, Tuple
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+import re
 
+def _standardize_text(text: str) -> str:
+    """
+    Cleans and standardizes raw text for downstream NLP tasks.
+
+    This function performs the following steps:
+    - Returns an empty string if the input is not a string.
+    - Removes URLs (e.g., http://..., www...).
+    - Removes email mentions (e.g., @username).
+    - Removes special characters, symbols, and numeric digits.
+    - Converts text to lowercase.
+    - Removes isolated single-character tokens (e.g., 'a', 'b').
+    - Collapses multiple consecutive whitespace characters into a single space.
+
+    Args:
+        text (str): The input string to clean.
+
+    Returns:
+        str: The standardized and cleaned version of the input text.
+    """
+    if not isinstance(text, str):
+        return ""
+
+    text = re.sub(r"http\S+|www\S+", " ", text)      # Remove URLs
+    text = re.sub(r"@\w+", " ", text)                # Remove mentions
+    text = re.sub(r"[^a-zA-Z\s]", " ", text)         # Remove special chars and digits
+    text = re.sub(r"\d+", " ", text)                 # Remove numbers
+    text = text.lower()                              # Lowercase
+    text = re.sub(r"\b[a-zA-Z]\b", " ", text)        # Remove single characters
+    text = re.sub(r"\s+", " ", text)                 # Normalize spaces
+
+    return text.strip()
 
 class DisambModel:
     """Wrapper around BERT to extract contextual embeddings for word sense disambiguation.
@@ -118,62 +150,44 @@ class DisambModel:
         target_emb = torch.stack(subword_embs).mean(dim=0)
         return target_emb
 
-    def get_context_words(self, sentence: str, target_word: str, top_k: int = 10) -> List[Tuple[str, float]]:
-        """Get top-k tokens most similar to the target word based on cosine similarity.
-
-        Args:
-            sentence (str): Input sentence.
-            target_word (str): Target word/phrase.
-            top_k (int, optional): Number of similar tokens to return. Defaults to 10.
-
-        Returns:
-            List[Tuple[str, float]]: List of (token, similarity_score) pairs, sorted by score.
-
-        Notes:
-            - Excludes special tokens ([CLS], [SEP]) and the target word itself.
-            - Returns empty list if target word is not found.
-        """
-        marked_text = f"{self.tokenizer.cls_token} {sentence} {self.tokenizer.sep_token}"
+    def get_context_words(self, sentence: str, target_word: str, top_k: int = 10, threshold: float = 0.5) -> List[Tuple[str, float]]:
+        cleaned_sentence = _standardize_text(sentence)
+        marked_text = f"{self.tokenizer.cls_token} {cleaned_sentence} {self.tokenizer.sep_token}"
         tokens = self.tokenizer.tokenize(marked_text)
         target_tokens = self.tokenizer.tokenize(target_word.lower())
-
         try:
             first_start, first_end = self._find_subword_span(tokens, target_tokens)
         except ValueError:
             return []
-
         encodings = self.tokenizer.encode_plus(
             marked_text,
             add_special_tokens=False,
             return_tensors="pt"
         )
-        input_ids = encodings["input_ids"].to(self.device)  # type: ignore
+        input_ids = encodings["input_ids"].to(self.device)
         token_type_ids = torch.ones_like(input_ids).to(self.device)
-
         with torch.no_grad():
             outputs = self.model(input_ids, token_type_ids=token_type_ids)
             hidden_states = outputs.hidden_states
-
         token_embeddings = []
         seq_len = input_ids.size(1)
         for idx in range(seq_len):
             layers = [hidden_states[-i][0][idx] for i in range(1, 5)]
             token_embeddings.append(torch.stack(layers).sum(dim=0))
-
         target_vector = token_embeddings[first_start]
         similarities = []
         for idx, token_str in enumerate(tokens):
             if idx in range(first_start, first_end + 1):
                 continue
-            if token_str in {self.tokenizer.cls_token, self.tokenizer.sep_token}:  # type: ignore
+            if token_str in {str(self.tokenizer.cls_token), str(self.tokenizer.sep_token)}:
                 continue
             score = F.cosine_similarity(
                 target_vector.unsqueeze(0),
                 token_embeddings[idx].unsqueeze(0),
                 dim=1
             ).item()
-            similarities.append((token_str, score))
-
+            if score >= threshold:
+                similarities.append((token_str, score))
         similarities.sort(key=lambda x: x[1], reverse=True)
         return similarities[:top_k]
 
