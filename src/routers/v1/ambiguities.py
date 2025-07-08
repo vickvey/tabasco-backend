@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request, Form
 from fastapi.responses import JSONResponse
+
 from src.config import settings
 from src.services import (
     build_target_word_similarity_matrix,
@@ -11,12 +12,7 @@ from src.utils import (
     ApiResponse
 )
 
-# Mount path configs from settings
-PROJECT_ROOT = settings.PROJECT_ROOT
-UPLOAD_FOLDER = settings.UPLOAD_FOLDER
-SUMMARY_FOLDER = settings.SUMMARY_FOLDER
-DETAILED_FOLDER = settings.DETAILED_FOLDER
-# LOG_DIR = settings.LOG_DIR # TODO: Complete this
+SESSION_FOLDER = settings.SESSION_FOLDER
 
 router = APIRouter()
 
@@ -24,21 +20,22 @@ router = APIRouter()
 @router.post("/target-matrix")
 async def get_optimal_clusters_data_from_target_matrix(
     request: Request,
+    session_id: str = Form(...),
     filename: str = Form(...),
     target_word: str = Form(...),
     frequency: int = Form(...)
 ) -> JSONResponse:
     """
-    Build a similarity matrix for sentences containing the target word in the given file,
+    Build a similarity matrix for sentences containing the target word in the given file (within a session),
     and return the optimal number of clusters and elbow plot data.
     """
-    # Validate file
-    file_path = ensure_uploaded_file_exists(filename)
+    # Ensure file exists within the session
+    file_path = ensure_uploaded_file_exists(session_id, filename)
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found in session '{session_id}'.")
 
-    # Read text
-    text_content = read_file_text(file_path)
+    # Read the content
+    text_content = read_file_text(session_id, filename)
     if not text_content:
         raise HTTPException(status_code=400, detail="The file contains no readable text.")
 
@@ -46,7 +43,7 @@ async def get_optimal_clusters_data_from_target_matrix(
         matrix, sentences = build_target_word_similarity_matrix(
             text_content=text_content,
             target_word=target_word,
-            model=request.app.state.disamb_model,  # Assuming disamb_model is stored in app state
+            model=request.app.state.disamb_model,
             frequency_limit=frequency
         )
 

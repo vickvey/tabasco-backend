@@ -1,3 +1,6 @@
+# Artifacts
+artifacts
+
 # Ignoring test_data
 notebooks/test_data
 
@@ -9,9 +12,6 @@ notebooks/test_data
 
 # Special example environment file (Not ignored)
 !.env.example
-
-# Uploads
-static
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python

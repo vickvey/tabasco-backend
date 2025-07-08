@@ -50,8 +50,6 @@ def build_target_word_similarity_matrix(
 
     if save_path:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        with open(save_path, "wb") as f:
-            pickle.dump(similarity_matrix, f)
+        torch.save(similarity_matrix, save_path)
         print(f"[✓] Saved similarity matrix of shape {similarity_matrix.shape} to {save_path}")
-
     return similarity_matrix, sentences

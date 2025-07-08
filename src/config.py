@@ -23,10 +23,13 @@ class Settings(BaseSettings):
 
     # Project Folders
     PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
-    UPLOAD_FOLDER: Path = PROJECT_ROOT / "static" / "uploads"
-    SUMMARY_FOLDER: Path = PROJECT_ROOT / "static" / "summary"
-    DETAILED_FOLDER: Path = PROJECT_ROOT / "static" / "detailed"
-    LOG_DIR: Path = PROJECT_ROOT / "logs"
+    ARTIFACTS_FOLDER: Path = PROJECT_ROOT / "artifacts"
+    SESSION_FOLDER: Path = ARTIFACTS_FOLDER / "sessions"
+    # UPLOAD_FOLDER: Path = PROJECT_ROOT / "uploads"
+    # SUMMARY_FOLDER: Path = PROJECT_ROOT / "static" / "summary"
+    # DETAILED_FOLDER: Path = PROJECT_ROOT / "static" / "detailed"
+    # LOG_DIR: Path = PROJECT_ROOT / "logs"
+
 
     def __init__(self, **kwargs):
         # 👇 Check if the .env file exists before anything else
@@ -36,7 +39,14 @@ class Settings(BaseSettings):
 
         super().__init__(**kwargs)
 
-        for folder in (self.UPLOAD_FOLDER, self.SUMMARY_FOLDER, self.DETAILED_FOLDER, self.LOG_DIR):
+        for folder in (
+            self.ARTIFACTS_FOLDER,
+            self.SESSION_FOLDER,
+            # self.UPLOAD_FOLDER, 
+            # self.SUMMARY_FOLDER, 
+            # self.DETAILED_FOLDER, 
+            # self.LOG_DIR
+            ):
             folder.mkdir(parents=True, exist_ok=True)
 
 # Singleton settings instance

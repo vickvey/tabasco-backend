@@ -5,7 +5,6 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from nltk.corpus import stopwords, wordnet as wn
 from .utils import (
-    ApiResponse, 
     ensure_nltk_data
 )
 from .models import DisambModel
@@ -22,7 +21,7 @@ def get_bert_tokenizer() -> BertTokenizer:
 def get_bert_model() -> BertModel:
     model = BertModel.from_pretrained("bert-base-uncased", output_hidden_states=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    return model.to(device)
+    return model.to(device) # type: ignore
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -71,13 +70,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    @app.get("/health", include_in_schema=False)
+    @app.get("/health")
     def health_check():
         return {"status": "ok"}
-
-    @app.get('/')
-    def read_root():
-        return ApiResponse.success('Welcome to TABASCO FastAPI !')
 
     init_routers(app=app)
     return app
