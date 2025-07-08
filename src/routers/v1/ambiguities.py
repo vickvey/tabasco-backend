@@ -37,7 +37,7 @@ async def get_optimal_clusters_data_from_target_matrix(
         raise HTTPException(status_code=400, detail="The file contains no readable text.")
 
     session_dir = SESSION_FOLDER / session_id
-    cache_filename = f"target-matrix_{target_word}_{frequency}.json"
+    cache_filename = f"target-mat_{filename}_{target_word}_{frequency}.json"
     cache_path = session_dir / cache_filename
 
     # ⚡ Check if cached result exists
