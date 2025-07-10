@@ -43,7 +43,7 @@ def _standardize_text(text: str) -> str:
     return text.strip()
 
 class DisambModel:
-    """Wrapper around BERT to extract contextual embeddings for word sense disambiguation.
+    """Wrapper around BERT to extract contextual embeddings for word sense/context disambiguation in a specific domain.
 
     Provides methods to extract:
     - Target word embeddings
@@ -150,46 +150,78 @@ class DisambModel:
         target_emb = torch.stack(subword_embs).mean(dim=0)
         return target_emb
 
-    def get_context_words(self, sentence: str, target_word: str, top_k: int = 10, threshold: float = 0.5) -> List[Tuple[str, float]]:
+    def get_context_words(
+        self,
+        sentence: str,
+        target_word: str,
+        top_k: int = 10,
+        threshold: float = 0.5
+    ) -> List[Tuple[str, float]]:
         cleaned_sentence = _standardize_text(sentence)
         marked_text = f"{self.tokenizer.cls_token} {cleaned_sentence} {self.tokenizer.sep_token}"
+
         tokens = self.tokenizer.tokenize(marked_text)
         target_tokens = self.tokenizer.tokenize(target_word.lower())
+
         try:
             first_start, first_end = self._find_subword_span(tokens, target_tokens)
         except ValueError:
             return []
+
         encodings = self.tokenizer.encode_plus(
             marked_text,
             add_special_tokens=False,
             return_tensors="pt"
         )
+
         input_ids = encodings["input_ids"].to(self.device)
         token_type_ids = torch.ones_like(input_ids).to(self.device)
+
         with torch.no_grad():
             outputs = self.model(input_ids, token_type_ids=token_type_ids)
             hidden_states = outputs.hidden_states
+
         token_embeddings = []
-        seq_len = input_ids.size(1)
-        for idx in range(seq_len):
+        for idx in range(input_ids.size(1)):
             layers = [hidden_states[-i][0][idx] for i in range(1, 5)]
             token_embeddings.append(torch.stack(layers).sum(dim=0))
+
         target_vector = token_embeddings[first_start]
         similarities = []
+
+        merged_tokens = []
+        current_token = ""
+        current_score = 0.0
+
         for idx, token_str in enumerate(tokens):
             if idx in range(first_start, first_end + 1):
                 continue
             if token_str in {str(self.tokenizer.cls_token), str(self.tokenizer.sep_token)}:
                 continue
+
             score = F.cosine_similarity(
                 target_vector.unsqueeze(0),
                 token_embeddings[idx].unsqueeze(0),
                 dim=1
             ).item()
+
             if score >= threshold:
-                similarities.append((token_str, score))
-        similarities.sort(key=lambda x: x[1], reverse=True)
-        return similarities[:top_k]
+                if token_str.startswith("##"):
+                    current_token += token_str[2:]
+                    current_score = max(current_score, score)
+                else:
+                    if current_token:
+                        merged_tokens.append((current_token, current_score))
+                    current_token = token_str
+                    current_score = score
+
+        if current_token:
+            merged_tokens.append((current_token, current_score))
+
+        filtered = [(word, sim) for word, sim in merged_tokens if word.isalpha()]
+        filtered.sort(key=lambda x: x[1], reverse=True)
+
+        return filtered[:top_k]
 
     def get_sentence_embedding(self, sentence: str) -> torch.Tensor:
         """Compute sentence embedding by mean-pooling token embeddings.
@@ -317,3 +349,4 @@ class DisambModel:
                 json.dump(data, f)
         else:
             raise ValueError("Format must be one of: pt, npy, json")
+        

@@ -12,5 +12,6 @@ from .clustering import (
     label_sentences_by_cluster)
 
 from .report_generation import (
-    generate_summary_files
+    generate_summary_json,
+    generate_detailed_json
 )
