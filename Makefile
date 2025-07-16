@@ -1,34 +1,31 @@
-include .env
-export $(shell sed 's/=.*//' .env)
-
 VENV := .venv
+PYTHON := $(VENV)/bin/python
+UV := uv
 
 # Create the virtual environment if it doesn't exist
-$(VENV)/bin/python:
+$(PYTHON):
 	@echo "📦 Creating virtual environment..."
-	uv venv $(VENV)
+	$(UV) venv $(VENV)
 
-# Install dependencies
-install: $(VENV)/bin/python
-	@echo "📦 Installing dependencies from requirements-torch.txt..."
-	uv pip install -r requirements-torch.txt
+# Install base and torch dependencies
+install: $(PYTHON)
+	@echo "📦 Installing base dependencies from pyproject.toml..."
+	$(UV) sync --no-cache
+	@echo "📦 Installing torch (CPU version only)..."
+	$(UV) pip install -r requirements-torch.txt --no-cache
 
-# Run the server using .env config
-run: install
-	@echo "🚀 Running with .env config (ENVIRONMENT = $(ENVIRONMENT))..."
-	uv run uvicorn src.server:app --host $(HOST) --port $(PORT)
-
-# Dev server with reload and docs
+# Run dev server with autoreload and docs
 dev: install
-	@echo "🔧 Running in development mode (ENVIRONMENT=development)..."
-	ENVIRONMENT=development uv run uvicorn src.server:app --reload --host $(HOST) --port $(PORT)
+	@echo "🔧 Running FastAPI in development mode..."
+	$(UV) run fastapi dev ./src/server.py
 
-# Production server with multiple workers
-prod: install
-	@echo "🚀 Running in production mode (ENVIRONMENT=production)..."
-	ENVIRONMENT=production uv run uvicorn src.server:app --workers 4 --host $(HOST) --port $(PORT)
+# Run production server with Docker
+prod:
+	@echo "🚀 Building and running FastAPI in production mode with Docker..."
+	docker build -t fastapi-app .
+	docker run -p 8000:80 fastapi-app
 
-# Run the tests
+# Run tests via pytest
 test: install
-	@echo "🧪 Running application tests ..."
-	uv run pytest
+	@echo "🧪 Running tests..."
+	$(UV) run pytest
