@@ -17,8 +17,6 @@ from src.utils import (
 )
 
 SESSION_FOLDER = settings.SESSION_FOLDER
-ENVIRONMENT = settings.ENVIRONMENT
-
 router = APIRouter()
 
 
@@ -70,41 +68,39 @@ async def upload_file(
 
 # ========== Dev-Only Utilities ==========
 
-if ENVIRONMENT != "production":
+@router.get('/view-txt-files')
+async def get_txt_files_for_session(session_id: str = Query(...)) -> JSONResponse:
+    """
+    🧪 Dev-only: Return all .txt files for a given session_id.
+    """
+    session_dir = SESSION_FOLDER / session_id
+    if not session_dir.exists() or not session_dir.is_dir():
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
 
-    @router.get('/view-txt-files')
-    async def get_txt_files_for_session(session_id: str = Query(...)) -> JSONResponse:
-        """
-        🧪 Dev-only: Return all .txt files for a given session_id.
-        """
-        session_dir = SESSION_FOLDER / session_id
-        if not session_dir.exists() or not session_dir.is_dir():
-            raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
+    txt_files = [
+        file.name
+        for file in session_dir.iterdir()
+        if file.is_file() and file.suffix.lower() == '.txt'
+    ]
 
-        txt_files = [
-            file.name
-            for file in session_dir.iterdir()
-            if file.is_file() and file.suffix.lower() == '.txt'
+    return JSONResponse(content={"filenames": txt_files})
+
+
+@router.get("/list-sessions")
+async def list_active_sessions() -> JSONResponse:
+    """
+    🧪 Dev-only: List all active session IDs (folder names) in the sessions directory.
+    """
+    try:
+        sessions = [
+            folder.name
+            for folder in SESSION_FOLDER.iterdir()
+            if folder.is_dir()
         ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list sessions: {str(e)}")
 
-        return JSONResponse(content={"filenames": txt_files})
-
-
-    @router.get("/list-sessions")
-    async def list_active_sessions() -> JSONResponse:
-        """
-        🧪 Dev-only: List all active session IDs (folder names) in the sessions directory.
-        """
-        try:
-            sessions = [
-                folder.name
-                for folder in SESSION_FOLDER.iterdir()
-                if folder.is_dir()
-            ]
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to list sessions: {str(e)}")
-
-        return JSONResponse(content={"sessions": sessions})
+    return JSONResponse(content={"sessions": sessions})
 
 
 # ========== Core NLP Route ==========

@@ -62,9 +62,9 @@ def create_app() -> FastAPI:
         description="A FastAPI REST API for detecting intra-domain ambiguities",
         version=settings.RELEASE_VERSION,
 
-        # Docs config depending upon ENVIRONMENT
-        docs_url=None if settings.ENVIRONMENT == "production" else "/docs", 
-        redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc",
+        # TODO: Uncomment in production
+        # docs_url=None, 
+        # redoc_url=None,
         
         # Configuring Lifespan
         lifespan=lifespan
