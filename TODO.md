@@ -1,2 +1,0 @@
-- fix the static summary files import thing in backend.
-- add some way for the frontend to access those static files per session.
