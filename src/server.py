@@ -8,9 +8,8 @@ from .utils import (
     ensure_nltk_data
 )
 from .models import DisambModel
-# from .v1_routes import router as api_v1_router
 from .routers import router as api_router
-from .config import settings
+from .utils.logger import logger
 
 
 @lru_cache()
@@ -48,30 +47,24 @@ async def lifespan(app: FastAPI):
     app.state.bert_model = model
     app.state.disamb_model = DisambModel(model, tokenizer, device)
 
-    # TODO: Add settings [LOW-PRIORITY]
     yield
 
 def init_routers(app: FastAPI):
     app.include_router(api_router, prefix='/api')
 
 def create_app() -> FastAPI:
+    logger.info("Starting Modern TABASCO backend")
     app = FastAPI(
         # Basic
-        title=settings.PROJECT_NAME,
-        summary="A FastAPI REST API for detecting intra-domain ambiguities",
+        title="TABASCO FastAPI",
+        # summary="A FastAPI REST API for detecting intra-domain ambiguities",
         description="A FastAPI REST API for detecting intra-domain ambiguities",
-        version=settings.RELEASE_VERSION,
-
-        # TODO: Uncomment in production
-        # docs_url=None, 
-        # redoc_url=None,
-        
-        # Configuring Lifespan
+        version="1.0.0",
         lifespan=lifespan
     )
 
     @app.get("/health")
-    def health_check():
+    def _health_check():
         return {"status": "ok"}
 
     init_routers(app=app)
