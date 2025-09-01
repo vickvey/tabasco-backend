@@ -7,12 +7,12 @@ $(PYTHON):
 	@echo "📦 Creating virtual environment..."
 	$(UV) venv $(VENV)
 
-# Install base and torch dependencies
+# Install dependencies
 install: $(PYTHON)
-	@echo "📦 Installing base dependencies from pyproject.toml..."
-	$(UV) sync --no-cache
-	@echo "📦 Installing torch (CPU version only)..."
-	$(UV) pip install -r requirements-torch.txt --no-cache
+	@echo "📦 Installing dependencies from pyproject.toml..."
+	$(UV) sync
+# 	@echo "📦 Installing torch (CPU version only)..."
+# 	$(UV) pip install -r requirements-torch.txt
 
 # Run dev server with autoreload and docs
 dev: install
@@ -29,3 +29,6 @@ prod:
 test: install
 	@echo "🧪 Running tests..."
 	$(UV) run pytest
+
+clean:
+	rm -rf venv .venv __pycache__ .pytest_cache

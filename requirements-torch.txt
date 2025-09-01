@@ -1,2 +1,0 @@
-torch==2.7.0+cpu
---index-url https://download.pytorch.org/whl/cpu
