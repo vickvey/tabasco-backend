@@ -2,7 +2,6 @@ from pathlib import Path
 
 import fitz # PyMuPDF
 from fastapi import HTTPException
-
 from src.config import settings
 
 # Mount constants from settings
@@ -37,7 +36,7 @@ def pdf2text(file_path: Path) -> str:
 
     try:
         with fitz.open(file_path) as doc:
-            text = " ".join(page.get_text("text") for page in doc if page.get_text("text"))
+            text = " ".join(page.get_text("text") for page in doc if page.get_text("text")) # type: ignore
         return text.strip()
     except Exception as e:
         raise ValueError(f"Failed to extract text from PDF: {e}")

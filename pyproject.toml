@@ -22,6 +22,7 @@ dependencies = [
     "uvicorn>=0.34.3",
     "torch>=2.7.0",
     "torchvision>=0.22.0",
+    "python-slugify>=8.0.4",
 ]
 
 [[tool.uv.index]]

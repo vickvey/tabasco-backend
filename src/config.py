@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
     ARTIFACTS_FOLDER: Path = PROJECT_ROOT / "artifacts"
     SESSION_FOLDER: Path = ARTIFACTS_FOLDER / "sessions"
-    UPLOAD_FOLDER: Path = PROJECT_ROOT / "uploads"
+    UPLOAD_FOLDER: Path = PROJECT_ROOT / "artifacts" / "uploads"
     LOG_DIR: Path = PROJECT_ROOT / "logs"
     # SUMMARY_FOLDER: Path = PROJECT_ROOT / "static" / "summary"
     # DETAILED_FOLDER: Path = PROJECT_ROOT / "static" / "detailed"
@@ -23,8 +23,8 @@ class Settings(BaseSettings):
         for folder in (
             self.ARTIFACTS_FOLDER,
             self.SESSION_FOLDER,
-            self.LOG_DIR
-            # self.UPLOAD_FOLDER, 
+            self.LOG_DIR,
+            self.UPLOAD_FOLDER
             # self.SUMMARY_FOLDER, 
             # self.DETAILED_FOLDER, 
             ):
