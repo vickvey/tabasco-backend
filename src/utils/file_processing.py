@@ -1,21 +1,18 @@
 from pathlib import Path
 import fitz  # PyMuPDF
-from src.config import settings
 
 # Constants from settings
-ALLOWED_EXTENSIONS = settings.ALLOWED_EXTENSIONS
-UPLOAD_FOLDER: Path = settings.UPLOAD_FOLDER
+# ALLOWED_EXTENSIONS = settings.ALLOWED_EXTENSIONS
+# UPLOAD_FOLDER: Path = settings.UPLOAD_FOLDER
 
-
-def allowed_file(filename: str) -> bool:
+def allowed_file(filename: str, allowed_extensions: set[str]) -> bool:
     """
     Check if the file has an allowed extension.
     """
     return (
         "." in filename
-        and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+        and filename.rsplit(".", 1)[1].lower() in allowed_extensions
     )
-
 
 def pdf2text(file_path: Path) -> str:
     """
@@ -38,7 +35,6 @@ def pdf2text(file_path: Path) -> str:
     except Exception as e:
         raise ValueError(f"Failed to extract text from PDF: {e}")
 
-
 def read_file_text(file_path: Path) -> str:
     """
     Read the content of a file.
@@ -56,13 +52,12 @@ def read_file_text(file_path: Path) -> str:
     except Exception as e:
         raise Exception(f"Failed to read file '{file_path.name}': {str(e)}")
 
-
-def ensure_uploaded_file_exists(filename: str) -> Path:
+def ensure_uploaded_file_exists(file_path: Path):
     """
     Ensure the file exists in the upload folder.
     Returns the full Path or raises FileNotFoundError.
     """
-    file_path = UPLOAD_FOLDER / filename
+    # file_path = UPLOAD_FOLDER / filename
     if not file_path.is_file():
-        raise FileNotFoundError(f"File '{filename}' not found in upload folder.")
+        raise FileNotFoundError(f"'{file_path}' is not valid.")
     return file_path
