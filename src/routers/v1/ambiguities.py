@@ -1,7 +1,6 @@
 import json
 from fastapi import APIRouter, HTTPException, Request, Form
 from fastapi.responses import JSONResponse
-
 from src.config import settings
 from src.services import (
     build_target_word_similarity_matrix,

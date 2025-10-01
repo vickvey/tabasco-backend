@@ -6,7 +6,6 @@ from fastapi import (
     APIRouter, Form, HTTPException, Request, UploadFile, File, Query
 )
 from fastapi.responses import JSONResponse
-
 from src.services import extract_top_n_nouns_with_frequency
 from src.config import settings
 from src.utils import (
